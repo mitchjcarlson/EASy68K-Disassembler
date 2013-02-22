@@ -17,16 +17,16 @@ START       ORG	    $1000
             MOVEQ   #14, D0         ; Trap task #14: Display A1 w/out CR and LF
             TRAP    #15             ; I/O
             
-            MOVEQ   #2,D0           ; Trap task #2: Get starting address
-            LEA     S_ADDR,A1
+            MOVEQ   #2,D0           ; Trap task #2: Get starting address and 
+            LEA     S_ADDR,A1       ; store as string at location A1 points to
             TRAP    #15             ; Read from keyboard to D1
             
             MOVEA.W (A2)+,A1        ; Ask for ending address for range
             MOVEQ   #14, D0         ; Trap task #14: Display A1 w/out CR and LF
             TRAP    #15             ; I/O
 
-            MOVEQ   #2,D0           ; Get ending address
-            LEA     E_ADDR,A1
+            MOVEQ   #2,D0           ; Get ending address and store as a string
+            LEA     E_ADDR,A1       ; at the location A1 points to
             TRAP    #15             ; Read from keyboard to D1
             
 LF          EQU     $0A             ; Line feed
@@ -41,6 +41,7 @@ S_ADDR      DS.L    2               ; Start address storage, stored as string.
 E_ADDR      DS.L    2               ; End address storage
 
             END     START
+
 
 
 
