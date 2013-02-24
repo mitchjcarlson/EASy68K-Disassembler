@@ -300,16 +300,177 @@ moveOvr		ROL.L		#08,D3				*move over 2 digits
 ha_exit		MOVEM.L		(SP)+,D3/D4/D2		;pop off stack
 			RTS
 
-		    END		    start
-
 *------------------------------------------------------------------------------
 ***************************** End IO Section **********************************
 *------------------------------------------------------------------------------
 
+*******************************************************************************
+*                         Test Disassemble Routines
+*******************************************************************************
+* instructions could contain as many as 5 16-bit words
+* e.g. MOVE.L 	$AAAAAAAA,$55555555
+
+	ORG			$7000
+
+* 	Test MOVE with various combinations of the effective address and with
+*	different sizes  
+
+*	MOVE 		<ea>,<ea>		; Size = (Byte, Word, Long)
+
+								**DESTINATION**
+	MOVE.B 		D0,D1 	 		; Data Register Direct
+	MOVE.B 		D0,(A1)	 		; Address Register Indirect
+	MOVE.B 		D0,(A1)+ 		; Address Register Indirect with Post increment
+	MOVE.B 		D0,-(A1)		; Address Register Indirect with Pre decrement
+	MOVE.B 		D0,$AAAA		; Absolute Word Address
+	MOVE.B 		D0,$AAAAAAAA 	; Absolute Long Address
+
+	MOVE.W 		D0,D1 	 		; Data Register Direct
+	MOVE.W 		D0,(A1)	 		; Address Register Indirect
+	MOVE.W 		D0,(A1)+ 		; Address Register Indirect with Post increment
+	MOVE.W 		D0,-(A1)		; Address Register Indirect with Pre decrement
+	MOVE.W 		D0,$AAAA		; Absolute Word Address
+	MOVE.W 		D0,$AAAAAAAA 	; Absolute Long Address
+
+	MOVE.L 		D0,D1 	 		; Data Register Direct
+	MOVE.L 		D0,(A1)	 		; Address Register Indirect
+	MOVE.L 		D0,(A1)+ 		; Address Register Indirect with Post increment
+	MOVE.L 		D0,-(A1)		; Address Register Indirect with Pre decrement
+	MOVE.L 		D0,$AAAA		; Absolute Word Address
+	MOVE.L 		D0,$AAAAAAAA 	; Absolute Long Address
+
+								**SOURCE**
+	MOVE.B 		D0,D1 	 		; Data Register Direct
+	MOVE.B 		(A0),D1	 		; Address Register Indirect
+	MOVE.B 		#$FF,D1	 		; Immediate Data
+	MOVE.B 		(A0)+,D1 		; Address Register Indirect with Post increment
+	MOVE.B 		-(A0),D1		; Address Register Indirect with Pre decrement
+	MOVE.B 		$AAAA,D0		; Absolute Word Address
+	MOVE.B 		$AAAAAAAA,D0 	; Absolute Long Address
+
+	MOVE.W 		D0,D1 	 		; Data Register Direct
+	MOVE.W 		A0,D1	 		; Address Register Direct
+	MOVE.W 		(A0),D1	 		; Address Register Indirect
+	MOVE.W 		#$FFFF,D1		; Immediate Data
+	MOVE.W 		(A0)+,D1 		; Address Register Indirect with Post increment
+	MOVE.W 		-(A0),D1		; Address Register Indirect with Pre decrement
+	MOVE.W 		$AAAA,D0		; Absolute Word Address
+	MOVE.W 		$AAAAAAAA,D0 	; Absolute Long Address
+
+	MOVE.L 		D0,D1 	 		; Data Register Direct
+	MOVE.L 		A0,D1	 		; Address Register Direct
+	MOVE.L 		(A0),D1	 		; Address Register Indirect
+	MOVE.L 		#$FFFFFFFF,D1	; Immediate Data
+	MOVE.L 		(A0)+,D1 		; Address Register Indirect with Post increment
+	MOVE.L 		-(A0),D1		; Address Register Indirect with Pre decrement
+	MOVE.L 		$AAAA,D0		; Absolute Word Address
+	MOVE.L 		$AAAAAAAA,D0 	; Absolute Long Address
+
+* 	Test MOVEA with various combinations of the effective address and with
+*	different sizes  
+
+*	MOVEA		<ea>,An 		; Size = (Word, Long)
+								
+								**SOURCE**
+	MOVEA.W 	D0,A1 			; Data Register Direct
+	MOVEA.W		A0,A1	 		; Address Register Direct
+	MOVEA.W		(A0),A1	 		; Address Register Indirect
+	MOVEA.W		#$FFFF,A1	 	; Immediate Data
+	MOVEA.W		(A0)+,A1 		; Address Register Indirect with Post increment
+	MOVEA.W		-(A0),A1		; Address Register Indirect with Pre decrement
+	MOVEA.W		$AAAA,A1		; Absolute Word Address
+	MOVEA.W		$AAAAAAAA,A1	; Absolute Long Address
+
+	MOVEA.L 	D0,A1 			; Data Register Direct
+	MOVEA.L		A0,A1	 		; Address Register Direct
+	MOVEA.L		(A0),A1	 		; Address Register Indirect
+	MOVEA.L		#$FFFFFFFF,A1	; Immediate Data
+	MOVEA.L		(A0)+,A1 		; Address Register Indirect with Post increment
+	MOVEA.L		-(A0),A1		; Address Register Indirect with Pre decrement
+	MOVEA.L		$AAAA,A1		; Absolute Word Address
+	MOVEA.L		$AAAAAAAA,A1	; Absolute Long Address
+
+* 	Test ADDA with various combinations of the effective address and with
+*	different sizes  
+
+*	ADDA 		<ea>,An 		; Size = (Word, Long)
+
+	ADDA.W 		D0,A1			; Data Register Direct
+	ADDA.W 		A0,A1			; Address Register Direct
+	ADDA.W 		(A0),A1			; Address Register Indirect
+	ADDA.W 		#$FFFF,A1		; Immediate Data
+	ADDA.W 		(A0)+,A1		; Address Register Indirect with Post increment
+	ADDA.W 		-(A0),A1		; Address Register Indirect with Pre decrement
+	ADDA.W 		$AAAA,A1		; Absolute Long Address
+	ADDA.W		$AAAAAAAA,A1	; Absolute Long Address
+
+	ADDA.L 		D0,A1			; Data Register Direct
+	ADDA.L 		A0,A1			; Address Register Direct
+	ADDA.L 		(A0),A1			; Address Register Indirect
+	ADDA.L 		#$FFFF,A1		; Immediate Data
+	ADDA.L 		(A0)+,A1		; Address Register Indirect with Post increment
+	ADDA.L 		-(A0),A1		; Address Register Indirect with Pre decrement
+	ADDA.L 		$AAAA,A1		; Absolute Long Address
+	ADDA.L		$AAAAAAAA,A1	; Absolute Long Address
+
+*	ADDI 		#<data>,<ea>	; Size = (Byte, Word, Long)
+*	ADDQ 		#<data>,<ea>	; Size = (Byte, Word, Long)
+*	SUBA 		<ea>,An			; Size = (Word, Long)
+*	SUBI 		#<data>,<ea>	; Size = (Byte, Word, Long)
+*	NEG 		<ea>			; Size = (Byte, Word, Long)
+*	AND 		<ea>,Dn			; Size = (Byte, Word, Long)
+*	AND 		Dn,<ea>
+*	ANDI 		#<data>,<ea>	; Size = (Byte, Word, Long)
+*	OR 			<ea>,Dn			; Size = (Byte, Word, Long)
+*	OR 			Dn,<ea>
+*	ORI 		#<data>,<ea>	; Size = (Byte, Word, Long)
+*	EOR 		Dn,<ea>			; Size = (Byte, Word, Long)
+*	EORI 		#<data>,<ea>	; Size = (Byte, Word, Long)
+
+*	ASd where d is direction, L or R
+*	ASL 		Dx,Dy 			; Size = (Byte, Word, Long)
+*	ASL 		#<data>,Dy
+*	ASL 		<ea>
+*	ASR 		Dx,Dy 			; Size = (Byte, Word, Long)
+*	ASR 		#<data>,Dy
+*	ASR 		<ea>
+
+*	ROd where d is direction, L or R 		
+*	ROL 		Dx,Dy 			; Size = (Byte, Word, Long)
+*	ROL 		#<data>,Dy
+*	ROL 		<ea>
+*	ROR 		Dx,Dy 			; Size = (Byte, Word, Long)
+*	ROR 		#<data>,Dy
+*	ROR 		<ea>
+*	CMP 		<ea>,Dn 		; Size = (Byte, Word, Long)
+*	CMPA 		<ea>,An 		; Size = (Word, Long)
+*	CMPI 		#<data>,<ea>	; Size = (Byte, Word, Long)
+*	JMP 		<ea>			; Unsized
+*	JSR 		<ea>			; Unsized
+*	Bcc 		<label>			; Size = (Byte, Word, Long*)
+*	NOP 						; Unsized
+*	RTS 						; Unsized
+
+; Data Register Direct
+; Address Register Direct
+; Address Register Indirect
+; Immediate Data
+; Address Register Indirect with Post increment
+; Address Register Indirect with Pre decrement
+; Absolute Long Address
+; Absolute Word Address
+
+*******************************************************************************
+*                       End Test Disassemble Routines
+*******************************************************************************
+
+		    END		    start
+		    
 *~Font name~Courier New~
 *~Font size~10~
 *~Tab type~1~
 *~Tab size~8~
+
 
 
 
