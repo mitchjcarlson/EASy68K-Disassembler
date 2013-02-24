@@ -13,22 +13,22 @@
 START:									; first instruction of program
 
 			OPT		CRE					*Bring in the Symbol Table
-strtAd		EQU		$00002000			*Starting Address
-endAd		EQU		$000FFFFF			*Ending Address
+strtAd		EQU		$00002000			*Starting Address for user input program
+endAd		EQU		$000FFFFF			*Ending Address - upper bound of input program
 invalidS	EQU		$000FFFFE			*Invalid starting Address if GTE 000FFFFE
 dollar		EQU		$24					*ASCII $
 LF			EQU		$0A					*ASCII value for Line feed
 CR			EQU		$0D					*ASCII value for Carriage return
 space		EQU		$20					*ASCII value for space
 comma		EQU		$2C					*ASCII value for comma
-task0		EQU		00					*Task 0
-task1		EQU		01					*Task 1
-task2		EQU		02					*Task 2
-start		EQU		$1000				*Starting address
-addSz		EQU		08					*Address Size is 8 bytes
-wdSz		EQU		04					*Size of a word == 4 bytes
-stack		EQU		$00100000			*Location of Stack
-evenAnd		EQU		$00000001			*EvenCk subroutine 
+task0		EQU		00					*Task0 from Berger, print a string to screen
+task1		EQU		01					*Task1 from Berger, prompt for input w/o newline
+task2		EQU		02					*Task2 from Berger, prompt and wait for input
+start		EQU		$1000				*Starting address of program
+addrSz		EQU		08					*Address Size = 8 bytes
+wdSz		EQU		04					*Word Size = 4 bytes
+stack		EQU		$00100000			*Default Location of Stack
+evenAnd		EQU		$00000001			*EvenCk subroutine check if a number is even 
 D			EQU		$44					*ASCII value for D
 A			EQU		$41					*ASCII value for A
 T			EQU		$54					*ASCII value for T
@@ -36,93 +36,99 @@ upN			EQU		$4E					*ASCII value for N for User Prompt
 lwn			EQU		$6E					*ASCII value for n for User Prompt
 upY			EQU		$59					*ASCII value for Y for User Prompt
 lwY			EQU		$79					*ASCII value for y for User Prompt
-outCt		EQU		25					*Will show 25 lines/screen
+outCt		EQU		25					*Will show 25 lines on each screen, can adjust
 region		EQU		80					*decimal number 80 to help fill
 
 
 			ORG			start			*Program Start
 			LEA			stack,SP		*Stack pointer in A7
 
-Greeting	MOVE.B		#task0,D0		*Start of Greeting. D0 holds task0(00)
-			LEA			greet,A1		*Greeting address Stored in A1
+*Displays greeting to user, prompts to begin
+Greeting	MOVE.B		#task0,D0		*Start of Greeting. Loads D0 with text from greeting
+			LEA			greet,A1		*Load Greeting address into A1
 			MOVE.W		greetL,D1		*Store Greeting length into D1
-			TRAP		#15				
-
-			MOVE.B		#task2,D0		*D0 holds task2(02) - Get Input from user
+			TRAP		#15				*Run
+			
+			MOVE.B		#task2,D0		*D0 Input from user
 			LEA			decision,A1		*Store input ptr to A1
-			TRAP		#15				
+			TRAP		#15				*Run
+			
 			MOVE.B		(A1),D2			*D2 holds first byte of input
 			CMPI.B		#upY,D2			*Check if D2 == Y
-			BEQ			stSec			*Start disassembling
+			BEQ			procStart		*Start disassembling
 			CMPI.B		#lwY,D2			*Check if D2 == y
-			BEQ			stSec			*Start disassembling
+			BEQ			procStart		*Start disassembling
 			CMPI.B		#upN,D2			*Check if D2(decision) == N
 			BEQ			stp				*Stop disassembler
 			CMPI.B		#lwN,D2			*Check if D2(decision) == n
 			BEQ			stp				*Stop disassembler
 			BRA			greetErr		*Display Error - invalid input	
 
-stSec	    MOVE.B	    #task1,D0		*D0 holds task1(01), print wo CR
+*Prompts and processes Starting Address
+procStart   MOVE.B	    #task1,D0		*D0 holds input from user
 			LEA			stAdd,A1		*A1 holds string asking for start
 			MOVE.W		stAddL,D1		*D1 holds length of start string
-			TRAP		#15				
+			TRAP		#15				*Run
+			
 			MOVE.B		#task2,D0		*D0 holds task2(02), retrieve input
 			LEA			data1,A1		*Storage location for input string
-			TRAP		#15				
-			CMPI.B		#00,D1			*compare value at D1 to 0
+			TRAP		#15				*Run
+			
+			CMPI.B		#00,D1			*Compare starting addr length to 0
 			BLE			startErr		*BLE 0 to bad String message (Addr too small) 
-			CMPI.B		#addSz,D1		*compare value at D1 to 8
+			CMPI.B		#addrSz,D1		*compare starting addr length to 8
 			BGT			startErr		*BGE 0 to badstring message (Addr too big)
 			CLR.L		D7				*Remove data from D7
-			BSR			a_to_h			*convert to hex
-			CMPI.B		#01,D6			*Check if bad value flag == 1 (is set)
-			BEQ			startErr		*is bad go to bad String message (bad value flag set)
-			CLR.L		D2				*clear register
-			MOVE.B		#addSz,D2		*put value 8 in D2
-			SUB.B		D1,D2			*subtract length of string from 8
-			MULU.W		#4,D2			*multiply by 4
-			ROL.L		D2,D7			*move hex over appropriate digits
-			BSR			evenCk			*need to check if address is even 
-			CMPI.L		#strtAd,D7		*compare start and D7
+			BSR			a_to_h			*Go to Hex conversion subroutine
+			CMPI.B		#01,D6			*Check if bad value flag(D6) == 1 (is set)
+			BEQ			startErr		*Branch to Bad String message (bad value flag set)
+			CLR.L		D2				*First clear register D2
+			MOVE.B		#addrSz,D2		*Then put value 8 in D2
+			SUB.B		D1,D2			*Subtract length of string from 8
+			MULU.W		#4,D2			*Multiply by 4 to get word
+			LSL.L		D2,D7			*Shift value calculated at D2 left, store in D7
+			BSR			evenCk			*Verify by checking if even
+			CMPI.L		#strtAd,D7		*compare start address and shifted address
 			BLT			startErr		*if smaller then is a bad address
-			CMPI.L		#invalidS,D7	*if end address is smaller, bad
-			BGE			startErr		*if start is larger than end, bad
+			CMPI.L		#invalidS,D7	*Too close to highest available address, so invalid
+			BGE			startErr		*Start is larger than end, Branch to Error
 			MOVE.L		D7,istart		*istart holds valid start address in hex
-			BRA			endSec			*go to end sequence
+			BRA			procEnd			*Branch to procEnd for End Addr validation
 
-endSec		MOVE.B		#task1,D0		*D0 holds task1, print wo CR
+*Prompts and processes Ending Address
+procEnd		MOVE.B		#task1,D0		*D0 holds task1, print wo CR
 			LEA			endAdd,A1		*A1 holds string asking for ending address
 			MOVE.W		endAddL,D1		*D1 holds length of ending string
 			TRAP		#15				
 
 			MOVE.B		#task2,D0		*D0 holds task2, get input from user
 			LEA			data2,A1		*Store input (as ptr) from user into A1
-			TRAP		#15				
-			CMPI.B		#00,D1			*compare value at D1 to 0
-			BLE			endErr			*BLE to 0, branch to Bad Ending Error 
-			CMPI.B		#addSz,D1		*compare value at D1 to 8
-			BGT			endErr			*BGT to 8, branch to Bad Ending Error
-			CLR.L		D7				*clear out D7
-			BSR			a_to_h			*convert to hex
-			CMPI.B		#01,D6			*Check if bad value flag == 1 (is set)
+			TRAP		#15				*Run
+			
+			CMPI.B		#00,D1			*Compare starting addr length to 0
+			BLE			endErr			*BLE 0 to Bad Ending Error (Addr too small)
+			CMPI.B		#addrSz,D1		*Compare address size to D1
+			BGT			endErr			*BGT value 8, branch to Bad Ending Error
+			CLR.L		D7				*Remove data from D7
+			BSR			a_to_h			*Go to Hex conversion subroutine
+			CMPI.B		#01,D6			*Check if bad value flag(D6) == 1 (is set)
 			BEQ			endErr			*BEQ branch to Bad Ending Error
-			CLR.L		D2				*clear out D2
-			MOVE.B		#addSz,D2		*put 8 in D2
-			SUB.B		D1,D2			*subtract length of string from 8
-			MULU.W		#4,D2			*multiply by 4
-			ROL.L		D2,D7			*move hex over appropriate digits
-			CMPI.L		#endAd,D7		*compare end address and D7
-			BGT			endErr			*if larger, it's invalid
-			MOVE.L		istart,D6		*move istart to D6
-			ADDI.L		#01,D6
-			CMP.L		D6,D7			*compare istart and end address
-			BLE			endErr			*if it's less than or equal, bad
-			MOVE.L		D7,iend			*iend holds valid start address in hex
-			*BRA			mkBuff 			*go create buffers
-			MOVE.B		#task1,D0		*D0 holds task1, print wo CR
+			CLR.L		D2				*First clear register D2
+			MOVE.B		#addrSz,D2		*Then put value 8 in D2
+			SUB.B		D1,D2			*Subtract length of string from 8
+			MULU.W		#4,D2			*Multiply by 4 to get word
+			LSL.L		D2,D7			*Shift value calculated at D2 left, store in D7
+			CMPI.L		#endAd,D7		*Compare end address and shifted address
+			BGT			endErr			*If larger than end address, branch to end error
+			MOVE.L		istart,D6		*Fill D6 with hex value of starting address
+			ADDI.L		#01,D6          *Add 1 to starting address
+			CMP.L		D6,D7			*Compare with end address
+			BLE			endErr			*Branch to end error if less than or equal
+			MOVE.L		D7,iend			*Set iend to shifted address value
+			MOVE.B		#task1,D0		*Get input from user
 			LEA         tempOut,A1      *Load temporary output to A1
 			MOVE.W      tempOutL,D1     *Load the length of the temp message
-			TRAP        #15
+			TRAP        #15             *Run
 			BRA         Greeting        *Branch back to Greeting
 			
 	
@@ -140,20 +146,14 @@ startErr	MOVE.B		#0,D6			*reset bad flag
 			LEA			stError,A1		*A1 holds error string
 			MOVE.W		stErrorL,D1		*D1 holds length of start error string
 			TRAP		#15				
-			BRA			stSec			*back to start sequence for reprompt
+			BRA			procStart		*back to start sequence for reprompt
 
 endErr		MOVE.B		#0,D6			*reset bad flag
 			MOVE.B		#task0,D0		*D0 holds task2, print w CR
 			LEA			endError,A1		*A1 holds error string
 			MOVE.W		endErrorL,D1	*D1 holds length of start error string
 			TRAP		#15				
-			BRA			endSec			*back to end sequence for repromp
-			
-bcontnu		MOVE.B		#task0,D0		*D0 holds task2, print w CR
-			LEA			iError,A1		*A1 holds error string
-			MOVE.W		iErrorL,D1		*D1 holds length of start error string
-			TRAP		#15				
-			BRA			Greeting		*back to start sequence for reprompt
+			BRA			procEnd			*back to end sequence for repromp
 			
 stp		STOP		#$2700		*back to simulator
 
@@ -178,7 +178,7 @@ crsl		DC.B	    1
 lfs			DC.B	    LF
 lfsl		DC.B	    1
 
-****************************** IO Prompts *************************************
+************************ IO Prompts and Messages*******************************
 greet		DC.B	    'SaB Disassembler - CSS 422 Winter',CR,LF
 		    DC.B	    'Would you like to Start Running Disassembler?',CR,LF
 		    DC.B	    'Please enter Y for yes, or N for no.' 
@@ -470,6 +470,7 @@ ha_exit		MOVEM.L		(SP)+,D3/D4/D2		;pop off stack
 *~Font size~10~
 *~Tab type~1~
 *~Tab size~8~
+
 
 
 
