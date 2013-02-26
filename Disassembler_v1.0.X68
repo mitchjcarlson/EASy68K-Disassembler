@@ -312,153 +312,556 @@ ha_exit		MOVEM.L		(SP)+,D3/D4/D2		;pop off stack
 
 	ORG			$7000
 
-* 	Test MOVE with various combinations of the effective address and with
-*	different sizes  
+*******************************************************************************
+*	MOVE 		<ea>,<ea>				; Size = (Byte, Word, Long)
+*******************************************************************************
 
-*	MOVE 		<ea>,<ea>		; Size = (Byte, Word, Long)
+	*BYTE*								**DESTINATION**
+	MOVE.B 		D0,D1 	 				; Data Register Direct
+	MOVE.B 		D0,(A1)	 				; Addr Reg Indirect
+	MOVE.B 		D0,(A1)+ 				; Addr Reg Indirect with Post increment
+	MOVE.B 		D0,-(A1)				; Addr Reg Indirect with Pre decrement
+	MOVE.B 		D0,$AAAA				; Absolute Word Address
+	MOVE.B 		D0,$AAAAAAAA 			; Absolute Long Address
 
-								**DESTINATION**
-	MOVE.B 		D0,D1 	 		; Data Register Direct
-	MOVE.B 		D0,(A1)	 		; Address Register Indirect
-	MOVE.B 		D0,(A1)+ 		; Address Register Indirect with Post increment
-	MOVE.B 		D0,-(A1)		; Address Register Indirect with Pre decrement
-	MOVE.B 		D0,$AAAA		; Absolute Word Address
-	MOVE.B 		D0,$AAAAAAAA 	; Absolute Long Address
+	*WORD*
+	MOVE.W 		D0,D1 	 				; Data Register Direct
+	MOVE.W 		D0,(A1)	 				; Addr Reg Indirect
+	MOVE.W 		D0,(A1)+ 				; Addr Reg Indirect with Post increment
+	MOVE.W 		D0,-(A1)				; Addr Reg Indirect with Pre decrement
+	MOVE.W 		D0,$AAAA				; Absolute Word Address
+	MOVE.W 		D0,$AAAAAAAA 			; Absolute Long Address
 
-	MOVE.W 		D0,D1 	 		; Data Register Direct
-	MOVE.W 		D0,(A1)	 		; Address Register Indirect
-	MOVE.W 		D0,(A1)+ 		; Address Register Indirect with Post increment
-	MOVE.W 		D0,-(A1)		; Address Register Indirect with Pre decrement
-	MOVE.W 		D0,$AAAA		; Absolute Word Address
-	MOVE.W 		D0,$AAAAAAAA 	; Absolute Long Address
+	*LONG*
+	MOVE.L 		D0,D1 	 				; Data Register Direct
+	MOVE.L 		D0,(A1)	 				; Addr Reg Indirect
+	MOVE.L 		D0,(A1)+ 				; Addr Reg Indirect with Post increment
+	MOVE.L 		D0,-(A1)				; Addr Reg Indirect with Pre decrement
+	MOVE.L 		D0,$AAAA				; Absolute Word Address
+	MOVE.L 		D0,$AAAAAAAA 			; Absolute Long Address
 
-	MOVE.L 		D0,D1 	 		; Data Register Direct
-	MOVE.L 		D0,(A1)	 		; Address Register Indirect
-	MOVE.L 		D0,(A1)+ 		; Address Register Indirect with Post increment
-	MOVE.L 		D0,-(A1)		; Address Register Indirect with Pre decrement
-	MOVE.L 		D0,$AAAA		; Absolute Word Address
-	MOVE.L 		D0,$AAAAAAAA 	; Absolute Long Address
+	*BYTE*								**SOURCE**
+	MOVE.B 		D0,D1 	 				; Data Register Direct
+	MOVE.B 		(A0),D1	 				; Addr Reg Indirect
+	MOVE.B 		(A0)+,D1 				; Addr Reg Indirect with Post increment
+	MOVE.B 		-(A0),D1				; Addr Reg Indirect with Pre decrement
+	MOVE.B 		$AAAA,D0				; Absolute Word Address
+	MOVE.B 		$AAAAAAAA,D0 			; Absolute Long Address
+	MOVE.B 		#$DD,D1	 				; Immediate Data
 
-								**SOURCE**
-	MOVE.B 		D0,D1 	 		; Data Register Direct
-	MOVE.B 		(A0),D1	 		; Address Register Indirect
-	MOVE.B 		#$FF,D1	 		; Immediate Data
-	MOVE.B 		(A0)+,D1 		; Address Register Indirect with Post increment
-	MOVE.B 		-(A0),D1		; Address Register Indirect with Pre decrement
-	MOVE.B 		$AAAA,D0		; Absolute Word Address
-	MOVE.B 		$AAAAAAAA,D0 	; Absolute Long Address
+	*WORD*
+	MOVE.W 		D0,D1 	 				; Data Register Direct
+	MOVE.W 		A0,D1	 				; Addr Reg Direct
+	MOVE.W 		(A0),D1	 				; Addr Reg Indirect
+	MOVE.W 		(A0)+,D1 				; Addr Reg Indirect with Post increment
+	MOVE.W 		-(A0),D1				; Addr Reg Indirect with Pre decrement
+	MOVE.W 		$AAAA,D0				; Absolute Word Address
+	MOVE.W 		$AAAAAAAA,D0 			; Absolute Long Address
+	MOVE.W 		#$DDDD,D1				; Immediate Data
 
-	MOVE.W 		D0,D1 	 		; Data Register Direct
-	MOVE.W 		A0,D1	 		; Address Register Direct
-	MOVE.W 		(A0),D1	 		; Address Register Indirect
-	MOVE.W 		#$FFFF,D1		; Immediate Data
-	MOVE.W 		(A0)+,D1 		; Address Register Indirect with Post increment
-	MOVE.W 		-(A0),D1		; Address Register Indirect with Pre decrement
-	MOVE.W 		$AAAA,D0		; Absolute Word Address
-	MOVE.W 		$AAAAAAAA,D0 	; Absolute Long Address
+	*LONG*
+	MOVE.L 		D0,D1 	 				; Data Register Direct
+	MOVE.L 		A0,D1	 				; Addr Reg Direct
+	MOVE.L 		(A0),D1	 				; Addr Reg Indirect
+	MOVE.L 		(A0)+,D1 				; Addr Reg Indirect with Post increment
+	MOVE.L 		-(A0),D1				; Addr Reg Indirect with Pre decrement
+	MOVE.L 		$AAAA,D0				; Absolute Word Address
+	MOVE.L 		$AAAAAAAA,D0 			; Absolute Long Address
+	MOVE.L 		#$DDDDDDDD,D1			; Immediate Data
 
-	MOVE.L 		D0,D1 	 		; Data Register Direct
-	MOVE.L 		A0,D1	 		; Address Register Direct
-	MOVE.L 		(A0),D1	 		; Address Register Indirect
-	MOVE.L 		#$FFFFFFFF,D1	; Immediate Data
-	MOVE.L 		(A0)+,D1 		; Address Register Indirect with Post increment
-	MOVE.L 		-(A0),D1		; Address Register Indirect with Pre decrement
-	MOVE.L 		$AAAA,D0		; Absolute Word Address
-	MOVE.L 		$AAAAAAAA,D0 	; Absolute Long Address
-
-* 	Test MOVEA with various combinations of the effective address and with
-*	different sizes  
-
-*	MOVEA		<ea>,An 		; Size = (Word, Long)
+*******************************************************************************
+*	MOVEA		<ea>,An 				; Size = (Word, Long)
+*******************************************************************************
 								
-								**SOURCE**
-	MOVEA.W 	D0,A1 			; Data Register Direct
-	MOVEA.W		A0,A1	 		; Address Register Direct
-	MOVEA.W		(A0),A1	 		; Address Register Indirect
-	MOVEA.W		#$FFFF,A1	 	; Immediate Data
-	MOVEA.W		(A0)+,A1 		; Address Register Indirect with Post increment
-	MOVEA.W		-(A0),A1		; Address Register Indirect with Pre decrement
-	MOVEA.W		$AAAA,A1		; Absolute Word Address
-	MOVEA.W		$AAAAAAAA,A1	; Absolute Long Address
+										**SOURCE**
+	*WORD*
+	MOVEA.W 	D0,A1 					; Data Register Direct
+	MOVEA.W		A0,A1	 				; Addr Reg Direct
+	MOVEA.W		(A0),A1	 				; Addr Reg Indirect
+	MOVEA.W		(A0)+,A1 				; Addr Reg Indirect with Post increment
+	MOVEA.W		-(A0),A1				; Addr Reg Indirect with Pre decrement
+	MOVEA.W		$AAAA,A1				; Absolute Word Address
+	MOVEA.W		$AAAAAAAA,A1			; Absolute Long Address
+	MOVEA.W		#$DDDD,A1	 			; Immediate Data
 
-	MOVEA.L 	D0,A1 			; Data Register Direct
-	MOVEA.L		A0,A1	 		; Address Register Direct
-	MOVEA.L		(A0),A1	 		; Address Register Indirect
-	MOVEA.L		#$FFFFFFFF,A1	; Immediate Data
-	MOVEA.L		(A0)+,A1 		; Address Register Indirect with Post increment
-	MOVEA.L		-(A0),A1		; Address Register Indirect with Pre decrement
-	MOVEA.L		$AAAA,A1		; Absolute Word Address
-	MOVEA.L		$AAAAAAAA,A1	; Absolute Long Address
+	*LONG*
+	MOVEA.L 	D0,A1 					; Data Register Direct
+	MOVEA.L		A0,A1	 				; Addr Reg Direct
+	MOVEA.L		(A0),A1	 				; Addr Reg Indirect
+	MOVEA.L		(A0)+,A1 				; Addr Reg Indirect with Post increment
+	MOVEA.L		-(A0),A1				; Addr Reg Indirect with Pre decrement
+	MOVEA.L		$AAAA,A1				; Absolute Word Address
+	MOVEA.L		$AAAAAAAA,A1			; Absolute Long Address
+	MOVEA.L		#$DDDDDDDD,A1			; Immediate Data
 
-* 	Test ADDA with various combinations of the effective address and with
-*	different sizes  
+*******************************************************************************
+*	ADDA 		<ea>,An 				; Size = (Word, Long)
+*******************************************************************************
 
-*	ADDA 		<ea>,An 		; Size = (Word, Long)
+	*WORD*
+	ADDA.W 		D0,A1					; Data Register Direct
+	ADDA.W 		A0,A1					; Addr Reg Direct
+	ADDA.W 		(A0),A1					; Addr Reg Indirect
+	ADDA.W 		(A0)+,A1				; Addr Reg Indirect with Post increment
+	ADDA.W 		-(A0),A1				; Addr Reg Indirect with Pre decrement
+	ADDA.W 		$AAAA,A1				; Absolute Word Address
+	ADDA.W		$AAAAAAAA,A1			; Absolute Long Address
+	ADDA.W 		#$DDDD,A1				; Immediate Data
 
-	ADDA.W 		D0,A1			; Data Register Direct
-	ADDA.W 		A0,A1			; Address Register Direct
-	ADDA.W 		(A0),A1			; Address Register Indirect
-	ADDA.W 		#$FFFF,A1		; Immediate Data
-	ADDA.W 		(A0)+,A1		; Address Register Indirect with Post increment
-	ADDA.W 		-(A0),A1		; Address Register Indirect with Pre decrement
-	ADDA.W 		$AAAA,A1		; Absolute Long Address
-	ADDA.W		$AAAAAAAA,A1	; Absolute Long Address
+	*LONG*
+	ADDA.L 		D0,A1					; Data Register Direct
+	ADDA.L 		A0,A1					; Addr Reg Direct
+	ADDA.L 		(A0),A1					; Addr Reg Indirect
+	ADDA.L 		(A0)+,A1				; Addr Reg Indirect with Post increment
+	ADDA.L 		-(A0),A1				; Addr Reg Indirect with Pre decrement
+	ADDA.L 		$AAAA,A1				; Absolute Word Address
+	ADDA.L		$AAAAAAAA,A1			; Absolute Long Address
+	ADDA.L 		#$DDDD,A1				; Immediate Data
 
-	ADDA.L 		D0,A1			; Data Register Direct
-	ADDA.L 		A0,A1			; Address Register Direct
-	ADDA.L 		(A0),A1			; Address Register Indirect
-	ADDA.L 		#$FFFF,A1		; Immediate Data
-	ADDA.L 		(A0)+,A1		; Address Register Indirect with Post increment
-	ADDA.L 		-(A0),A1		; Address Register Indirect with Pre decrement
-	ADDA.L 		$AAAA,A1		; Absolute Long Address
-	ADDA.L		$AAAAAAAA,A1	; Absolute Long Address
+*******************************************************************************
+*	ADDI 		#<data>,<ea>			; Size = (Byte, Word, Long)
+*******************************************************************************
 
-*	ADDI 		#<data>,<ea>	; Size = (Byte, Word, Long)
-*	ADDQ 		#<data>,<ea>	; Size = (Byte, Word, Long)
-*	SUBA 		<ea>,An			; Size = (Word, Long)
-*	SUBI 		#<data>,<ea>	; Size = (Byte, Word, Long)
-*	NEG 		<ea>			; Size = (Byte, Word, Long)
-*	AND 		<ea>,Dn			; Size = (Byte, Word, Long)
-*	AND 		Dn,<ea>
-*	ANDI 		#<data>,<ea>	; Size = (Byte, Word, Long)
-*	OR 			<ea>,Dn			; Size = (Byte, Word, Long)
-*	OR 			Dn,<ea>
-*	ORI 		#<data>,<ea>	; Size = (Byte, Word, Long)
-*	EOR 		Dn,<ea>			; Size = (Byte, Word, Long)
-*	EORI 		#<data>,<ea>	; Size = (Byte, Word, Long)
+	*BYTE*
+	ADDI.B 		#$DD,D1					; Data Register Direct
+	ADDI.B 		#$DD,(A1)				; Addr Reg Indirect
+	ADDI.B 		#$DD,(A1)+				; Addr Reg Indirect with Post increment
+	ADDI.B 		#$DD,-(A1)				; Addr Reg Indirect with Pre decrement
+	ADDI.B 		#$DD,$AAAA				; Absolute Word Address
+	ADDI.B 		#$DD,$AAAAAAAA			; Absolute Long Address
 
-*	ASd where d is direction, L or R
-*	ASL 		Dx,Dy 			; Size = (Byte, Word, Long)
-*	ASL 		#<data>,Dy
-*	ASL 		<ea>
-*	ASR 		Dx,Dy 			; Size = (Byte, Word, Long)
-*	ASR 		#<data>,Dy
-*	ASR 		<ea>
+	*WORD*
+	ADDI.W 		#$DDDD,D1				; Data Register Direct
+	ADDI.W 		#$DDDD,(A1)				; Addr Reg Indirect
+	ADDI.W 		#$DDDD,(A1)+			; Addr Reg Indirect with Post increment
+	ADDI.W 		#$DDDD,-(A1)			; Addr Reg Indirect with Pre decrement
+	ADDI.W 		#$DDDD,$AAAA			; Absolute Word Address
+	ADDI.W 		#$DDDD,$AAAAAAAA 		; Absolute Long Address
 
-*	ROd where d is direction, L or R 		
-*	ROL 		Dx,Dy 			; Size = (Byte, Word, Long)
-*	ROL 		#<data>,Dy
-*	ROL 		<ea>
-*	ROR 		Dx,Dy 			; Size = (Byte, Word, Long)
-*	ROR 		#<data>,Dy
-*	ROR 		<ea>
-*	CMP 		<ea>,Dn 		; Size = (Byte, Word, Long)
-*	CMPA 		<ea>,An 		; Size = (Word, Long)
-*	CMPI 		#<data>,<ea>	; Size = (Byte, Word, Long)
-*	JMP 		<ea>			; Unsized
-*	JSR 		<ea>			; Unsized
-*	Bcc 		<label>			; Size = (Byte, Word, Long*)
-*	NOP 						; Unsized
-*	RTS 						; Unsized
+	*LONG*
+	ADDI.L 		#$DDDDDDDD,D1			; Data Register Direct
+	ADDI.L 		#$DDDDDDDD,(A1)			; Addr Reg Indirect
+	ADDI.L 		#$DDDDDDDD,(A1)+		; Addr Reg Indirect with Post increment
+	ADDI.L 		#$DDDDDDDD,-(A1) 		; Addr Reg Indirect with Pre decrement
+	ADDI.L 		#$DDDDDDDD,$AAAA 		; Absolute Word Address
+	ADDI.L 		#$DDDDDDDD,$AAAAAAAA 	; Absolute Long Address
+
+*******************************************************************************
+*	ADDQ 		#<data>,<ea>			; Size = (Byte, Word, Long)
+*******************************************************************************
+	
+	*BYTE*
+	ADDQ.B 		#8,D1					; Data Register Direct
+*ERROR*	ADDQ.B 		#8,A1					; Addr Reg Direct
+	ADDQ.B 		#8,(A1)					; Addr Reg Indirect
+	ADDQ.B 		#8,(A1)+				; Addr Reg Indirect with Post increment
+	ADDQ.B 		#8,-(A1)				; Addr Reg Indirect with Pre decrement
+	ADDQ.B 		#8,$AAAA				; Absolute Word Address
+	ADDQ.B 		#8,$AAAAAAAA			; Absolute Long Address
+
+	*WORD*
+	ADDQ.W 		#8,D1					; Data Register Direct
+	ADDQ.W 		#8,A1					; Addr Reg Direct
+	ADDQ.W 		#8,(A1)					; Addr Reg Indirect
+	ADDQ.W 		#8,(A1)+				; Addr Reg Indirect with Post increment
+	ADDQ.W 		#8,-(A1)				; Addr Reg Indirect with Pre decrement
+	ADDQ.W 		#8,$AAAA				; Absolute Word Address
+	ADDQ.W 		#8,$AAAAAAAA			; Absolute Long Address
+
+	*LONG*
+	ADDQ.L 		#8,D1					; Data Register Direct
+	ADDQ.L 		#8,A1					; Addr Reg Direct
+	ADDQ.L 		#8,(A1)					; Addr Reg Indirect
+	ADDQ.L 		#8,(A1)+				; Addr Reg Indirect with Post increment
+	ADDQ.L 		#8,-(A1)				; Addr Reg Indirect with Pre decrement
+	ADDQ.L 		#8,$AAAA				; Absolute Word Address
+	ADDQ.L 		#8,$AAAAAAAA			; Absolute Long Addres
+
+*******************************************************************************
+*	SUBA 		<ea>,An					; Size = (Word, Long)
+*******************************************************************************
+	
+	*WORD*
+	SUBA.W 		D0,A1					; Data Register Direct
+	SUBA.W 		A0,A1					; Addr Reg Direct
+	SUBA.W 		(A0),A1					; Addr Reg Indirect
+	SUBA.W 		(A0)+,A1				; Addr Reg Indirect with Post increment
+	SUBA.W 		-(A0),A1				; Addr Reg Indirect with Pre decrement
+	SUBA.W 		$AAAA,A1				; Absolute Word Address
+	SUBA.W 		$AAAAAAAA,A1			; Absolute Long Address
+	SUBA.W 		#$DDDD,A1				; Immediate Data
+
+	*LONG*
+	SUBA.L 		D0,A1					; Data Register Direct
+	SUBA.L 		A0,A1					; Addr Reg Direct
+	SUBA.L 		(A0),A1					; Addr Reg Indirect
+	SUBA.L 		(A0)+,A1				; Addr Reg Indirect with Post increment
+	SUBA.L 		-(A0),A1				; Addr Reg Indirect with Pre decrement
+	SUBA.L 		$AAAA,A1				; Absolute Word Address
+	SUBA.L 		$AAAAAAAA,A1			; Absolute Long Address
+	SUBA.L 		#$DDDDDDDD,A1			; Immediate Data
+
+*******************************************************************************
+*	SUBI 		#<data>,<ea>			; Size = (Byte, Word, Long)
+*******************************************************************************
+
+	*BYTE*
+	SUBI.B 		#$DD,D1 				; Data Register Direct
+	SUBI.B 		#$DD,(A1) 				; Addr Reg Indirect
+	SUBI.B 		#$DD,(A1)+				; Addr Reg Indirect with Post increment
+	SUBI.B 		#$DD,-(A1) 				; Addr Reg Indirect with Pre decrement
+	SUBI.B 		#$DD,$AAAA 				; Absolute Word Address
+	SUBI.B 		#$DD,$AAAAAAAA			; Absolute Long Address
+
+	*WORD*
+	SUBI.W 		#$DDDD,D1 				; Data Register Direct
+	SUBI.W 		#$DDDD,(A1) 			; Addr Reg Indirect
+	SUBI.W 		#$DDDD,(A1)+			; Addr Reg Indirect with Post increment
+	SUBI.W 		#$DDDD,-(A1) 			; Addr Reg Indirect with Pre decrement
+	SUBI.W 		#$DDDD,$AAAA 			; Absolute Word Address
+	SUBI.W 		#$DDDD,$AAAAAAAA		; Absolute Long Address
+
+	*LONG*
+	SUBI.L 		#$DDDDDDDD,D1 			; Data Register Direct
+	SUBI.L 		#$DDDDDDDD,(A1) 		; Addr Reg Indirect
+	SUBI.L 		#$DDDDDDDD,(A1)+		; Addr Reg Indirect with Post increment
+	SUBI.L 		#$DDDDDDDD,-(A1) 		; Addr Reg Indirect with Pre decrement
+	SUBI.L 		#$DDDDDDDD,$AAAA 		; Absolute Word Address
+	SUBI.L 		#$DDDDDDDD,$AAAAAAAA	; Absolute Long Address
+
+*******************************************************************************
+*	NEG 		<ea>					; Size = (Byte, Word, Long)
+*******************************************************************************
+
+	*BYTE*
+	NEG.B 		D0						; Data Register Direct
+	NEG.B 		(A0)					; Addr Reg Indirect
+	NEG.B 		(A0)+					; Addr Reg Indirect with Post increment
+	NEG.B 		-(A0)					; Addr Reg Indirect with Pre decrement
+*ERROR*	NEG.B 		#$AAAA					; Absolute Word Address
+*ERROR*	NEG.B 		#$AAAAAAAA				; Absolute Long Address
+
+	*WORD*
+	NEG.W 		D0						; Data Register Direct
+	NEG.W 		(A0)					; Addr Reg Indirect
+	NEG.W 		(A0)+					; Addr Reg Indirect with Post increment
+	NEG.W 		-(A0)					; Addr Reg Indirect with Pre decrement
+*ERROR*	NEG.W 		#$AAAA					; Absolute Word Address
+*ERROR*	NEG.W 		#$AAAAAAAA				; Absolute Long Address
+
+	*LONG*
+	NEG.L 		D0						; Data Register Direct
+	NEG.L 		(A0)					; Addr Reg Indirect
+	NEG.L 		(A0)+					; Addr Reg Indirect with Post increment
+	NEG.L 		-(A0)					; Addr Reg Indirect with Pre decrement
+*ERROR*	NEG.L 		#$AAAA					; Absolute Word Address
+*ERROR*	NEG.L 		#$AAAAAAAA				; Absolute Long Address
+
+*******************************************************************************
+*	AND 		<ea>,Dn					; Size = (Byte, Word, Long)
+*******************************************************************************
+
+	*BYTE*								*SOURCE*
+	AND.B 		D0,D1					; Data Register Direct
+	AND.B 		(A0),D1 				; Addr Reg Indirect
+	AND.B 		(A0)+,D1 				; Addr Reg Indirect with Post increment
+	AND.B 		-(A0),D1 				; Addr Reg Indirect with Pre decrement
+	AND.B 		$AAAA,D1 				; Absolute Word Address
+	AND.B 		$AAAAAAAA,D1 			; Absolute Long Address
+	AND.B 		#$DD,D1 				; Immediate Data
+
+	*WORD*
+	AND.W 		D0,D1					; Data Register Direct
+	AND.W 		(A0),D1 				; Addr Reg Indirect
+	AND.W 		(A0)+,D1 				; Addr Reg Indirect with Post increment
+	AND.W 		-(A0),D1 				; Addr Reg Indirect with Pre decrement
+	AND.W 		$AAAA,D1 				; Absolute Word Address
+	AND.W 		$AAAAAAAA,D1 			; Absolute Long Address
+	AND.W 		#$DD,D1 				; Immediate Data
+
+	*LONG*
+	AND.L 		D0,D1					; Data Register Direct
+	AND.L 		(A0),D1 				; Addr Reg Indirect
+	AND.L 		(A0)+,D1 				; Addr Reg Indirect with Post increment
+	AND.L 		-(A0),D1 				; Addr Reg Indirect with Pre decrement
+	AND.L 		$AAAA,D1 				; Absolute Word Address
+	AND.L 		$AAAAAAAA,D1 			; Absolute Long Address
+	AND.L 		#$DD,D1 				; Immediate Data
+
+*******************************************************************************
+*	AND 		Dn,<ea>					; Size = (Byte, Word, Long)
+*******************************************************************************
+
+	*BYTE*								*DESTINATION*
+	AND.B 		D0,(A1)					; Addr Reg Indirect
+	AND.B 		D0,(A1)+				; Addr Reg Indirect with Post increment
+	AND.B 		D0,-(A1)				; Addr Reg Indirect with Pre decrement
+	AND.B 		D0,$AAAA				; Absolute Word Address
+	AND.B 		D0,$AAAAAAAA			; Absolute Long Address
+
+	*WORD*
+	AND.W 		D0,(A1)					; Addr Reg Indirect
+	AND.W 		D0,(A1)+				; Addr Reg Indirect with Post increment
+	AND.W 		D0,-(A1)				; Addr Reg Indirect with Pre decrement
+	AND.W 		D0,$AAAA				; Absolute Word Address
+	AND.W 		D0,$AAAAAAAA			; Absolute Long Address
+
+	*LONG*
+	AND.L 		D0,(A1)					; Addr Reg Indirect
+	AND.L 		D0,(A1)+				; Addr Reg Indirect with Post increment
+	AND.L 		D0,-(A1)				; Addr Reg Indirect with Pre decrement
+	AND.L 		D0,$AAAA				; Absolute Word Address
+	AND.L 		D0,$AAAAAAAA			; Absolute Long Address
+
+*******************************************************************************
+*	ANDI 		#<data>,<ea>			; Size = (Byte, Word, Long)
+*******************************************************************************
 
 ; Data Register Direct
-; Address Register Direct
-; Address Register Indirect
-; Immediate Data
-; Address Register Indirect with Post increment
-; Address Register Indirect with Pre decrement
-; Absolute Long Address
+; Addr Reg Direct
+; Addr Reg Indirect
+; Addr Reg Indirect with Post increment
+; Addr Reg Indirect with Pre decrement
 ; Absolute Word Address
+; Absolute Long Address
+; Immediate Data
+
+*******************************************************************************
+*	OR 			<ea>,Dn					; Size = (Byte, Word, Long)
+*******************************************************************************
+
+; Data Register Direct
+; Addr Reg Direct
+; Addr Reg Indirect
+; Addr Reg Indirect with Post increment
+; Addr Reg Indirect with Pre decrement
+; Absolute Word Address
+; Absolute Long Address
+; Immediate Data
+
+*******************************************************************************
+*	OR 			Dn,<ea>
+*******************************************************************************
+
+; Data Register Direct
+; Addr Reg Direct
+; Addr Reg Indirect
+; Addr Reg Indirect with Post increment
+; Addr Reg Indirect with Pre decrement
+; Absolute Word Address
+; Absolute Long Address
+; Immediate Data
+
+*******************************************************************************
+*	ORI 		#<data>,<ea>			; Size = (Byte, Word, Long)
+*******************************************************************************
+
+; Data Register Direct
+; Addr Reg Direct
+; Addr Reg Indirect
+; Addr Reg Indirect with Post increment
+; Addr Reg Indirect with Pre decrement
+; Absolute Word Address
+; Absolute Long Address
+; Immediate Data
+
+*******************************************************************************
+*	EOR 		Dn,<ea>					; Size = (Byte, Word, Long)
+*******************************************************************************
+
+; Data Register Direct
+; Addr Reg Direct
+; Addr Reg Indirect
+; Addr Reg Indirect with Post increment
+; Addr Reg Indirect with Pre decrement
+; Absolute Word Address
+; Absolute Long Address
+; Immediate Data
+
+*******************************************************************************
+*	EORI 		#<data>,<ea>			; Size = (Byte, Word, Long)
+*******************************************************************************
+
+; Data Register Direct
+; Addr Reg Direct
+; Addr Reg Indirect
+; Addr Reg Indirect with Post increment
+; Addr Reg Indirect with Pre decrement
+; Absolute Word Address
+; Absolute Long Address
+; Immediate Data
+
+*******************************************************************************
+*	ASd where d is direction, L or R
+*******************************************************************************
+
+*******************************************************************************
+*	ASL 		Dx,Dy 					; Size = (Byte, Word, Long)
+*	ASL 		#<data>,Dy
+*	ASL 		<ea>
+*******************************************************************************
+
+; Data Register Direct
+; Addr Reg Direct
+; Addr Reg Indirect
+; Addr Reg Indirect with Post increment
+; Addr Reg Indirect with Pre decrement
+; Absolute Word Address
+; Absolute Long Address
+; Immediate Data
+
+*******************************************************************************
+*	ASR 		Dx,Dy 					; Size = (Byte, Word, Long)
+*	ASR 		#<data>,Dy
+*	ASR 		<ea>
+*******************************************************************************
+
+; Data Register Direct
+; Addr Reg Direct
+; Addr Reg Indirect
+; Addr Reg Indirect with Post increment
+; Addr Reg Indirect with Pre decrement
+; Absolute Word Address
+; Absolute Long Address
+; Immediate Data
+
+*******************************************************************************
+*	ROd where d is direction, L or R 		
+*******************************************************************************
+
+*******************************************************************************
+*	ROL 		Dx,Dy 					; Size = (Byte, Word, Long)
+*	ROL 		#<data>,Dy
+*	ROL 		<ea>
+*******************************************************************************
+
+; Data Register Direct
+; Addr Reg Direct
+; Addr Reg Indirect
+; Addr Reg Indirect with Post increment
+; Addr Reg Indirect with Pre decrement
+; Absolute Word Address
+; Absolute Long Address
+; Immediate Data
+
+*******************************************************************************
+*	ROR 		Dx,Dy 					; Size = (Byte, Word, Long)
+*	ROR 		#<data>,Dy
+*	ROR 		<ea>
+*******************************************************************************
+
+; Data Register Direct
+; Addr Reg Direct
+; Addr Reg Indirect
+; Addr Reg Indirect with Post increment
+; Addr Reg Indirect with Pre decrement
+; Absolute Word Address
+; Absolute Long Address
+; Immediate Data
+
+*******************************************************************************
+*	CMP 		<ea>,Dn 				; Size = (Byte, Word, Long)
+*******************************************************************************
+
+; Data Register Direct
+; Addr Reg Direct
+; Addr Reg Indirect
+; Addr Reg Indirect with Post increment
+; Addr Reg Indirect with Pre decrement
+; Absolute Word Address
+; Absolute Long Address
+; Immediate Data
+
+*******************************************************************************
+*	CMPA 		<ea>,An 				; Size = (Word, Long)
+*******************************************************************************
+
+; Data Register Direct
+; Addr Reg Direct
+; Addr Reg Indirect
+; Addr Reg Indirect with Post increment
+; Addr Reg Indirect with Pre decrement
+; Absolute Word Address
+; Absolute Long Address
+; Immediate Data
+
+*******************************************************************************
+*	CMPI 		#<data>,<ea>			; Size = (Byte, Word, Long)
+*******************************************************************************
+
+; Data Register Direct
+; Addr Reg Direct
+; Addr Reg Indirect
+; Addr Reg Indirect with Post increment
+; Addr Reg Indirect with Pre decrement
+; Absolute Word Address
+; Absolute Long Address
+; Immediate Data
+
+*******************************************************************************
+*	JMP 		<ea>					; Unsized
+*******************************************************************************
+
+; Data Register Direct
+; Addr Reg Direct
+; Addr Reg Indirect
+; Addr Reg Indirect with Post increment
+; Addr Reg Indirect with Pre decrement
+; Absolute Word Address
+; Absolute Long Address
+; Immediate Data
+
+*******************************************************************************
+*	JSR 		<ea>					; Unsized
+*******************************************************************************
+
+; Data Register Direct
+; Addr Reg Direct
+; Addr Reg Indirect
+; Addr Reg Indirect with Post increment
+; Addr Reg Indirect with Pre decrement
+; Absolute Word Address
+; Absolute Long Address
+; Immediate Data
+
+*******************************************************************************
+*	Bcc 		<label>					; Size = (Byte, Word, Long*)
+*******************************************************************************
+
+; Data Register Direct
+; Addr Reg Direct
+; Addr Reg Indirect
+; Addr Reg Indirect with Post increment
+; Addr Reg Indirect with Pre decrement
+; Absolute Word Address
+; Absolute Long Address
+; Immediate Data
+
+*******************************************************************************
+*	NOP 								; Unsized
+*******************************************************************************
+
+; Data Register Direct
+; Addr Reg Direct
+; Addr Reg Indirect
+; Addr Reg Indirect with Post increment
+; Addr Reg Indirect with Pre decrement
+; Absolute Word Address
+; Absolute Long Address
+; Immediate Data
+
+*******************************************************************************
+*	RTS 								; Unsized
+*******************************************************************************
+
+; Data Register Direct
+; Addr Reg Direct
+; Addr Reg Indirect
+; Addr Reg Indirect with Post increment
+; Addr Reg Indirect with Pre decrement
+; Absolute Word Address
+; Absolute Long Address
+; Immediate Data
 
 *******************************************************************************
 *                       End Test Disassemble Routines
@@ -466,15 +869,6 @@ ha_exit		MOVEM.L		(SP)+,D3/D4/D2		;pop off stack
 
 		    END		    start
 		    
-*~Font name~Courier New~
-*~Font size~10~
-*~Tab type~1~
-*~Tab size~8~
-
-
-
-
-
 *~Font name~Courier New~
 *~Font size~10~
 *~Tab type~1~
