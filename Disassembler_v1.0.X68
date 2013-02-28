@@ -308,14 +308,37 @@ ha_exit		MOVEM.L		(SP)+,D3/D4/D2		;pop off stack
 *                              Op-code Routine
 *******************************************************************************
 
-; --Memory address is passed in from I/O in one of the address registers
+; --Receive a pointer to the op-code word in memory, a pointer to the next
+;   available space in the buffer, and a good/bad flag (bool bit) from the I/O
+;   routine
 ; --The Word data at the specified address is moved to Data register
 ; --Move bits from the word to separate data registers for comparison, and/or
-;   employ some form of bit masking, shifting, and rolling.
+;   employ some form of bit masking, shifting, or rolling.
 ; --If Word cannot be decoded to a matching op-code, set some kind of bool
 ;   flag/bit and return to I/O
 ; --If Word can be decoded, then prepare ASCII string to return to I/O
-; --Effective address values are sent to EA routine
+; --Send 6 bits from the EA field of the op-code word, a pointer to the
+;   next word after the op-code Word, and a good/bad flag (bool bit) to the
+;   EA routine
+; --Receive a pointer to the next word after the EA word, a pointer to next
+;   available space in the buffer, and a good/bad flag (bool bit) from the EA
+;   routine
+; --Send a memory pointer to the next op-code word and a good/bad flag 
+;   (bool bit) to I/O routine
+
+*******************************************************************************
+
+**Start routine**
+; --Registers are arbitrary, but all register states, except the register used
+;   for the pointer to the op-code word (A0 for now), should be saved prior to 
+;   op-code routine anyway
+; --oc_routine = op-code routine
+oc_routine      MOVE.W      (A0),D0             ; value at pointer -> register
+
+; compare
+
+; jump table
+jmp_table
 
 *******************************************************************************
 *                            End Op-code Routine
@@ -325,11 +348,15 @@ ha_exit		MOVEM.L		(SP)+,D3/D4/D2		;pop off stack
 *                                 EA Routine
 *******************************************************************************
 
-; --Effective address value is received from Op-code routine
+; --Receive 6 bits from the EA field of the op-code word, a pointer to the
+;   next word after the op-code Word, and a good/bad flag (bool bit) from the
+;   op-code routine
 ; --Effective address is decoded
 ; --If decode is successful/unsuccessful, set bool/bit flag appropriately 
 ; --If successful, prepare ASCII string value for display
-; --Send value or value location back. <-Ambiguous, to Op-code Routine or I/O?
+; --Send a memory pointer to the next word after the EA word, a pointer to the
+;   next available space in the buffer, and a good/bad flag (bool bit) back 
+;   to op-code routine
 
 *******************************************************************************
 *                               End EA Routine
