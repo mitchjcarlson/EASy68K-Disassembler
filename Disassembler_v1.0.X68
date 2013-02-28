@@ -305,12 +305,49 @@ ha_exit		MOVEM.L		(SP)+,D3/D4/D2		;pop off stack
 *------------------------------------------------------------------------------
 
 *******************************************************************************
+*                              Op-code Routine
+*******************************************************************************
+
+; --Memory address is passed in from I/O in one of the address registers
+; --The Word data at the specified address is moved to Data register
+; --Move bits from the word to separate data registers for comparison, and/or
+;   employ some form of bit masking, shifting, and rolling.
+; --If Word cannot be decoded to a matching op-code, set some kind of bool
+;   flag/bit and return to I/O
+; --If Word can be decoded, then prepare ASCII string to return to I/O
+; --Effective address values are sent to EA routine
+
+*******************************************************************************
+*                            End Op-code Routine
+*******************************************************************************
+
+*******************************************************************************
+*                                 EA Routine
+*******************************************************************************
+
+; --Effective address value is received from Op-code routine
+; --Effective address is decoded
+; --If decode is successful/unsuccessful, set bool/bit flag appropriately 
+; --If successful, prepare ASCII string value for display
+; --Send value or value location back. <-Ambiguous, to Op-code Routine or I/O?
+
+*******************************************************************************
+*                               End EA Routine
+*******************************************************************************
+
+*******************************************************************************
 *                         Test Disassemble Routines
 *******************************************************************************
 * instructions could contain as many as 5 16-bit words
 * e.g. MOVE.L 	$AAAAAAAA,$55555555
 
                 ORG         $7000
+
+*******************************************************************************
+*   NOP                                 ; Unsized
+*******************************************************************************
+
+    NOP                                 ; first instruction to disassemble
 
 *******************************************************************************
 *   MOVE        <ea>,<ea>               ; Size = (Byte, Word, Long)
@@ -993,12 +1030,6 @@ ha_exit		MOVEM.L		(SP)+,D3/D4/D2		;pop off stack
     BPL         plus
     BVC         overflow_clear
     BVS         overflow_set
-
-*******************************************************************************
-*   NOP                                 ; Unsized
-*******************************************************************************
-
-    NOP
 
 *******************************************************************************
 *   RTS                                 ; Unsized
