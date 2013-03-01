@@ -308,37 +308,85 @@ ha_exit		MOVEM.L		(SP)+,D3/D4/D2		;pop off stack
 *                              Op-code Routine
 *******************************************************************************
 
-; --Receive a pointer to the op-code word in memory, a pointer to the next
-;   available space in the buffer, and a good/bad flag (bool bit) from the I/O
-;   routine
-; --The Word data at the specified address is moved to Data register
-; --Move bits from the word to separate data registers for comparison, and/or
-;   employ some form of bit masking, shifting, or rolling.
-; --If Word cannot be decoded to a matching op-code, set some kind of bool
-;   flag/bit and return to I/O
-; --If Word can be decoded, then prepare ASCII string to return to I/O
-; --Send 6 bits from the EA field of the op-code word, a pointer to the
-;   next word after the op-code Word, and a good/bad flag (bool bit) to the
-;   EA routine
-; --Receive a pointer to the next word after the EA word, a pointer to next
-;   available space in the buffer, and a good/bad flag (bool bit) from the EA
-;   routine
-; --Send a memory pointer to the next op-code word and a good/bad flag 
-;   (bool bit) to I/O routine
+* --Receive a pointer to the op-code word in memory, a pointer to the next
+*   available space in the buffer, and a good/bad flag (bool bit) from the I/O
+*   routine
+* --The Word data at the specified address is moved to Data register
+* --Move bits from the word to separate data registers for comparison, and/or
+*   employ some form of bit masking, shifting, or rolling.
+* --If Word cannot be decoded to a matching op-code, set some kind of bool
+*   flag/bit and return to I/O
+* --If Word can be decoded, then prepare ASCII string to return to I/O
+* --Send 6 bits from the EA field of the op-code word, a pointer to the
+*   next word after the op-code Word, and a good/bad flag (bool bit) to the
+*   EA routine
+* --Receive a pointer to the next word after the EA word, a pointer to next
+*   available space in the buffer, and a good/bad flag (bool bit) from the EA
+*   routine
+* --Send a memory pointer to the next op-code word and a good/bad flag 
+*   (bool bit) to I/O routine
 
 *******************************************************************************
 
 **Start routine**
-; --Registers are arbitrary, but all register states, except the register used
-;   for the pointer to the op-code word (A0 for now), should be saved prior to 
-;   op-code routine anyway
-; --oc_routine = op-code routine
-oc_routine      MOVE.W      (A0),D0             ; value at pointer -> register
+* --Registers are arbitrary, but all register states except the register used
+*   for the pointer to the op-code word (A0 for now) should be saved prior to 
+*   op-code routine anyway
+* --Buffer needs to have a address register to act as pointer
+* --bool bit, still not sure which register to use
+* --ocr = op-code routine
+ocr         MOVE.W      (A0),D0     ; value at pointer -> register
 
-; compare
+* Isolate first four bits and assign them to register D1
+            MOVE.W      D0,D1       ; load into new reg as not to overwrite
+                                        ; original
+            ROL.W       #4,D1       ; move last four bits to first
+            ANDI.W      #$F,D1      ; mask to keep only first four
 
-; jump table
-jmp_table
+* Isolate next 
+
+
+* Now that isolated, compare and branch
+            CMP.B       #$00,D1
+            BEQ         ZERO        ; ORI, ANDI, SUBI, EORI, COMPI
+            CMP.B       #$01,D1
+            BEQ         ONE         ; MOVE.B
+            CMP.B       #$02,D1
+            BEQ         TWO         ; MOVE.W, MOVEA.W
+            CMP.B       #$03,D1
+            BEQ         THREE       ; MOVE.L, MOVEA.L
+            CMP.B       #$04,D1
+            BEQ         FOUR        ; NEG,NOP,RTS,JSR,JMP
+            CMP.B       #$05,D1
+            BEQ         FIVE        ; ADDQ
+            CMP.B       #$06,D1
+            BEQ         SIX         ; Bcc
+            CMP.B       #$08,D1
+            BEQ         EIGHT       ; OR
+            CMP.B       #$09,D1
+            BEQ         NINE        ; SUBA
+            CMP.B       #$0B,D1
+            BEQ         B_        ; EOR, CMP, CMPA
+            CMP.B       #$0C,D1
+            BEQ         C_        ; AND
+            CMP.B       #$0D,D1
+            BEQ         D_        ; ADDA
+            CMP.B       #$0E,D1
+            BEQ         E_        ; ASd, ROd
+
+ZERO
+ONE
+TWO
+THREE
+FOUR
+FIVE
+SIX
+EIGHT
+NINE
+B_
+c_
+D_
+E_
 
 *******************************************************************************
 *                            End Op-code Routine
@@ -375,6 +423,56 @@ jmp_table
 *******************************************************************************
 
     NOP                                 ; first instruction to disassemble
+
+*******************************************************************************
+*   NEG         <ea>                    ; Size = (Byte, Word, Long)
+*******************************************************************************
+
+    *BYTE*                              **<ea>**
+    NEG.B       D0                      ; Data Register Direct
+    NEG.B       (A0)                    ; Addr Reg Indirect
+    NEG.B       (A0)+                   ; Addr Reg Indirect with Post increment
+    NEG.B       -(A0)                   ; Addr Reg Indirect with Pre decrement
+    NEG.B       $AAAA                  ; Absolute Word Address
+    NEG.B       $AAAAAAAA              ; Absolute Long Address
+
+    *WORD*
+    NEG.W       D0                      ; Data Register Direct
+    NEG.W       (A0)                    ; Addr Reg Indirect
+    NEG.W       (A0)+                   ; Addr Reg Indirect with Post increment
+    NEG.W       -(A0)                   ; Addr Reg Indirect with Pre decrement
+    NEG.W       $AAAA                  ; Absolute Word Address
+    NEG.W       $AAAAAAAA              ; Absolute Long Address
+
+    *LONG*
+    NEG.L       D0                      ; Data Register Direct
+    NEG.L       (A0)                    ; Addr Reg Indirect
+    NEG.L       (A0)+                   ; Addr Reg Indirect with Post increment
+    NEG.L       -(A0)                   ; Addr Reg Indirect with Pre decrement
+    NEG.L       $AAAA                  ; Absolute Word Address
+    NEG.L       $AAAAAAAA              ; Absolute Long Address
+
+*******************************************************************************
+*   JMP         <ea>                    ; Unsized
+*******************************************************************************
+
+    JMP         (A0)                    ; Addr Reg Indirect
+    JMP         $AAAA                   ; Absolute Word Address
+    JMP         $AAAAAAAA               ; Absolute Long Address
+
+*******************************************************************************
+*   JSR         <ea>                    ; Unsized
+*******************************************************************************
+
+    JSR         (A0)                    ; Addr Reg Indirect
+    JSR         $AAAA                   ; Absolute Word Address
+    JSR         $AAAAAAAA               ; Absolute Long Address
+
+*******************************************************************************
+*   RTS                                 ; Unsized
+*******************************************************************************
+
+    RTS
 
 *******************************************************************************
 *   MOVE        <ea>,<ea>               ; Size = (Byte, Word, Long)
@@ -590,34 +688,6 @@ jmp_table
     SUBI.L      #$DDDDDDDD,-(A1)        ; Addr Reg Indirect with Pre decrement
     SUBI.L      #$DDDDDDDD,$AAAA        ; Absolute Word Address
     SUBI.L      #$DDDDDDDD,$AAAAAAAA    ; Absolute Long Address
-
-*******************************************************************************
-*   NEG         <ea>                    ; Size = (Byte, Word, Long)
-*******************************************************************************
-
-    *BYTE*                              **<ea>**
-    NEG.B       D0                      ; Data Register Direct
-    NEG.B       (A0)                    ; Addr Reg Indirect
-    NEG.B       (A0)+                   ; Addr Reg Indirect with Post increment
-    NEG.B       -(A0)                   ; Addr Reg Indirect with Pre decrement
-    NEG.B       $AAAA                  ; Absolute Word Address
-    NEG.B       $AAAAAAAA              ; Absolute Long Address
-
-    *WORD*
-    NEG.W       D0                      ; Data Register Direct
-    NEG.W       (A0)                    ; Addr Reg Indirect
-    NEG.W       (A0)+                   ; Addr Reg Indirect with Post increment
-    NEG.W       -(A0)                   ; Addr Reg Indirect with Pre decrement
-    NEG.W       $AAAA                  ; Absolute Word Address
-    NEG.W       $AAAAAAAA              ; Absolute Long Address
-
-    *LONG*
-    NEG.L       D0                      ; Data Register Direct
-    NEG.L       (A0)                    ; Addr Reg Indirect
-    NEG.L       (A0)+                   ; Addr Reg Indirect with Post increment
-    NEG.L       -(A0)                   ; Addr Reg Indirect with Pre decrement
-    NEG.L       $AAAA                  ; Absolute Word Address
-    NEG.L       $AAAAAAAA              ; Absolute Long Address
 
 *******************************************************************************
 *   AND         <ea>,Dn                 ; Size = (Byte, Word, Long)
@@ -1024,22 +1094,6 @@ jmp_table
     CMPI.L      #$DDDDDDDD,$AAAAAAAA    ; Absolute Long Address
 
 *******************************************************************************
-*   JMP         <ea>                    ; Unsized
-*******************************************************************************
-
-    JMP         (A0)                    ; Addr Reg Indirect
-    JMP         $AAAA                   ; Absolute Word Address
-    JMP         $AAAAAAAA               ; Absolute Long Address
-
-*******************************************************************************
-*   JSR         <ea>                    ; Unsized
-*******************************************************************************
-
-    JSR         (A0)                    ; Addr Reg Indirect
-    JSR         $AAAA                   ; Absolute Word Address
-    JSR         $AAAAAAAA               ; Absolute Long Address
-
-*******************************************************************************
 *   Bcc         <label>                 ; Size = (Byte, Word, Long*)
 *******************************************************************************
 
@@ -1057,12 +1111,6 @@ jmp_table
     BPL         plus
     BVC         overflow_clear
     BVS         overflow_set
-
-*******************************************************************************
-*   RTS                                 ; Unsized
-*******************************************************************************
-
-    RTS
 
 *******************************************************************************
 *                       End Test Disassemble Routines
