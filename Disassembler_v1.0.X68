@@ -328,25 +328,25 @@ ha_exit		MOVEM.L		(SP)+,D3/D4/D2		;pop off stack
 
 *******************************************************************************
 
-**Start routine**
+**Notes for routine**
 * --Registers are arbitrary, but all register states except the register used
 *   for the pointer to the op-code word (A0 for now) should be saved prior to 
 *   op-code routine anyway
-* --Buffer needs to have a address register to act as pointer
+* --Universal buffer needs to be established
 * --bool bit, still not sure which register to use
-* --ocr = op-code routine
-ocr         MOVE.W      (A0),D0     ; value at pointer -> register
+* --OCR = Op-code routine
+* --JSR OCR is a temporary call, remove when I/O actual utilizes subroutine
+            JSR         OCR         
+OCR ; subroutine called by I/O
+            LEA         BUFFER,A6   ; declared at end of op-code routine
 
-* Isolate first four bits and assign them to register D1
-            MOVE.W      D0,D1       ; load into new reg as not to overwrite
-                                        ; original
-            ROL.W       #4,D1       ; move last four bits to first
-            ANDI.W      #$F,D1      ; mask to keep only first four
+* Isolate bits d12-d15 and assign them to register D1
+            MOVE.W      D0,D1       ; avoid overwrite of original
+            ROL.W       #4,D1       ; move d12-d15 -> d0-d3
+            ANDI.W      #$F,D1      ; mask to keep only four bits
+                                    ; potentially unnecessary step
 
-* Isolate next 
-
-
-* Now that isolated, compare and branch
+* Now that bits are isolated, compare and branch
             CMP.B       #$00,D1
             BEQ         ZERO        ; ORI, ANDI, SUBI, EORI, COMPI
             CMP.B       #$01,D1
@@ -366,19 +366,72 @@ ocr         MOVE.W      (A0),D0     ; value at pointer -> register
             CMP.B       #$09,D1
             BEQ         NINE        ; SUBA
             CMP.B       #$0B,D1
-            BEQ         B_        ; EOR, CMP, CMPA
+            BEQ         B_          ; EOR, CMP, CMPA
             CMP.B       #$0C,D1
-            BEQ         C_        ; AND
+            BEQ         C_          ; AND
             CMP.B       #$0D,D1
-            BEQ         D_        ; ADDA
+            BEQ         D_          ; ADDA
             CMP.B       #$0E,D1
-            BEQ         E_        ; ASd, ROd
+            BEQ         E_          ; ASd, ROd
+            BNE         DATA        ; Generic, value not recognized
 
 ZERO
 ONE
 TWO
 THREE
-FOUR
+
+FOUR ; NEG,NOP,RTS,JSR,JMP
+* Isolate bits d9-d11 and assign them to register D2
+            MOVE.W      D0,D2       ; avoid overwrite of original
+            ROL.W       #7,D2       ; move d8-d11 -> d0-d2
+            ANDI.W      #$7,D2      ; mask to keep only three bits
+
+* Now that bits are isolated, compare and branch
+            CMP.B       #$02,D2
+            BEQ         FOUR_2      ; NEG
+            CMP.B       #$07,D2
+            BEQ         FOUR_7      ; NOP, RTS, JSR, JMP
+            BNE         DATA        ; Generic, value not recognized
+ 
+FOUR_2 ; NEG
+* Isolate bits d0-d5 and send them to EA routine
+
+FOUR_7 ; NOP, RTS, JSR, JMP
+* Isolate bits d6-d8 and assign them to register D3
+            MOVE.W      D0,D3       ; avoid overwrite of original
+            ROR.W       #6,D3       ; move d6-d8 -> d0-d2
+            ANDI.W      #$7,D3      ; mask to keep only three bits
+
+* Now that bits are isolated, compare and branch
+            CMP.B       #$01,D3
+            BEQ         FOUR_7_1    ; NOP, RTS
+            CMP.B       #$02,D3     
+            BEQ         FOUR_7_2    ; JSR
+            CMP.B       #$03,D3     
+            BEQ         FOUR_7_3    ; JMP
+            BNE         DATA        ; Generic, value not recognized
+
+FOUR_7_1 ; NOP, RTS
+* Isolate bits d0-d5 and assign them to register D4
+            MOVE.W      D0,D4       ; avoid overwrite of original
+            ANDI.W      #$3F,D4     ; mask to keep only six bits
+
+* Now that bits are isolated, compare and branch
+            CMP.B       #$31,D4
+            BEQ         FOUR_7_1_31 ; NOP
+            CMP.B       #$35,D4     
+            BEQ         FOUR_7_1_35 ; RTS
+            BNE         DATA        ; Generic, value not recognized
+
+FOUR_7_1_31 ; NOP
+* Push NOP onto buffer
+            MOVE.L      #'NOP',(A6)+    ; push 'NOP' to buffer
+            RTS                         ; return to I/O
+
+FOUR_7_1_35 ; RTS
+* Push RTS onto buffer
+FOUR_7_2
+FOUR_7_3
 FIVE
 SIX
 EIGHT
@@ -387,6 +440,9 @@ B_
 c_
 D_
 E_
+DATA
+
+BUFFER      DS.L        50 ; temp buffer used until we establish real buffer
 
 *******************************************************************************
 *                            End Op-code Routine
