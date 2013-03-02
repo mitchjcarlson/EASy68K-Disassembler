@@ -48,11 +48,11 @@ Greeting	MOVE.B		#task0,D0		*Start of Greeting. Loads D0 with text from greeting
 			LEA			greet,A1		*Load Greeting address into A1
 			MOVE.W		greetL,D1		*Store Greeting length into D1
 			TRAP		#15				*Run
-			
+
 			MOVE.B		#task2,D0		*D0 Input from user
 			LEA			decision,A1		*Store input ptr to A1
 			TRAP		#15				*Run
-			
+
 			MOVE.B		(A1),D2			*D2 holds first byte of input
 			CMPI.B		#upY,D2			*Check if D2 == Y
 			BEQ			procStart		*Start disassembling
@@ -69,11 +69,11 @@ procStart   MOVE.B	    #task1,D0		*D0 holds input from user
 			LEA			stAdd,A1		*A1 holds string asking for start
 			MOVE.W		stAddL,D1		*D1 holds length of start string
 			TRAP		#15				*Run
-			
+
 			MOVE.B		#task2,D0		*D0 holds task2(02), retrieve input
 			LEA			data1,A1		*Storage location for input string
 			TRAP		#15				*Run
-			
+
 			CMPI.B		#00,D1			*Compare starting addr length to 0
 			BLE			startErr		*BLE 0 to bad String message (Addr too small) 
 			CMPI.B		#addrSz,D1		*compare starting addr length to 8
@@ -104,7 +104,7 @@ procEnd		MOVE.B		#task1,D0		*D0 holds task1, print wo CR
 			MOVE.B		#task2,D0		*D0 holds task2, get input from user
 			LEA			data2,A1		*Store input (as ptr) from user into A1
 			TRAP		#15				*Run
-			
+
 			CMPI.B		#00,D1			*Compare starting addr length to 0
 			BLE			endErr			*BLE 0 to Bad Ending Error (Addr too small)
 			CMPI.B		#addrSz,D1		*Compare address size to D1
@@ -130,11 +130,11 @@ procEnd		MOVE.B		#task1,D0		*D0 holds task1, print wo CR
 			MOVE.W      tempOutL,D1     *Load the length of the temp message
 			TRAP        #15             *Run
 			BRA         Greeting        *Branch back to Greeting
-			
-	
+
+
 
 ****************************** IO Errors **************************************
-			
+
 greetErr	MOVE.B		#task0,D0		*D0 holds task2(02), print w CR
 			LEA			iError,A1		*A1 holds error string
 			MOVE.W		iErrorL,D1		*D1 holds length of start error string
@@ -154,7 +154,7 @@ endErr		MOVE.B		#0,D6			*reset bad flag
 			MOVE.W		endErrorL,D1	*D1 holds length of start error string
 			TRAP		#15				
 			BRA			procEnd			*back to end sequence for repromp
-			
+
 stp		STOP		#$2700		*back to simulator
 
 **************************** IO Variables *************************************
@@ -462,6 +462,101 @@ BUFFER      DS.L        50 ; temp buffer used until we establish real buffer
 ;   next available space in the buffer, and a good/bad flag (bool bit) back 
 ;   to op-code routine
 
+ea_decode   MOVEM.L     A0-A8/D0-D8,-(SP)       ;Save data from registers to stack
+            LEA         ea_index_table,A1       ;Get reference to the EA Table
+            MOVE.W      D0,D2                   ;Get a copy of the six EA bits
+            MOVE.B      #3,D1                   ;Store number of bits we wish to shift
+            LSR.W       D1,D0                   ;Shift to the Right
+            MULU	    #6,D0			        ;Form Offset - saw in Berger Book
+	        JSR	        00(A1,D0)		        ;Now we have the index, back to Index table
+	        MOVEM.L     (SP)+,A0-A8/D0-D8       ;Restore registers from stack
+	        RTS				                    ;Return 
+
+ea_ind_table
+            jmp         aeindex0000             ;Direct Data Register
+            jmp         aeindex0001             ;Direct Address Register
+            jmp         aeindex0010             ;Indirect Address Register
+            jmp         aeindex0011             ;Indirect Address Register with Post Increment
+            jmp         aeindex0100             ;Indirect Address Register with Pre Decrement
+            jmp         aeindex0101             ;Indirect Address Register using Index
+            jmp         aeindex0110             ;Absolute or Immediate EA
+            jmp         aeindex0111             ;Not used
+
+*Direct Data Register - Return the Data Register to the buffer - Dn
+aeindex0000 MOVE	    D2,D0		            ;Get EA from D2 (6bits)
+	        ANDI	    #7,D0		            ;Grab Register (3bits)
+		    BSR	        send_data	            ;Send data to buffer
+		    RTS                                 ;Return
+		    
+*Direct Address Register - Return the Address Register to the buffer - An
+aeindex0001 MOVE        D2,D0                   ;Get EA from D2 (6bits)
+            ANDI        #7,D0                   ;AND with 3bits to get Register Info
+            BSR         #send_addr              ;Send Address to buffer
+            RTS                                 ;Return
+            
+*Indirect Address Register - Returns Address within Parentheses - (An)
+aeindex0010 LEA	        os_oParen,A1	        ;ASCII for Open Paren
+		    MOVE.W	    os_oParenL,D1	        ;Get the length
+		    BSR	        add_instr_buf	        ;Add the Paren to the buffer
+		    
+		    CLR.L	    D0		                ;Empty data register
+		    MOVE	    D2,D0		            ;Store EA bits (6bits)
+		    ANDI	    #7,D0		            ;AND with 3-bits to get values
+		    BSR	        send_addr_buf           ;Add Address to buffer after Open Paren
+
+		    CLR.L	    D1		                ;Empty data register
+		    LEA	        os_cParen,A1	        ;ASCII for Close Paren
+		    MOVE.W	    os_cParenL,D1	        ;Get the length
+		    BSR	        send_inst_buf           ;Add Close Paren to buffer after addr
+            RTS                                 ;Return
+            
+*Indirect Address Register with Post-Increment - (An)+	    
+aeindex0011 LEA	        os_oParen,A1	        ;ASCII for Open Paren
+		    MOVE.W	    os_oParenL,D1	        ;Get the length
+		    BSR	        add_instr_buf	        ;Add the Paren to the buffer
+		    
+		    CLR.L	    D0		                ;Empty data register
+		    MOVE	    D2,D0		            ;Store EA bits (6bits)
+		    ANDI	    #7,D0		            ;AND with 3-bits to get values
+		    BSR	        send_addr_buf           ;Add Address to buffer after Open Paren
+
+		    CLR.L	    D1		                ;Empty data register
+		    LEA	        os_cParen,A1	        ;ASCII for Close Paren
+		    MOVE.W	    os_cParenL,D1	        ;Get the length
+		    BSR	        send_instr_buf          ;Add Close Paren to buffer after addr
+            RTS                                 ;Return
+            
+            CLR.L       D0                      ;Clear Register
+            LEA         os_inc,A1               ;ASCII for Plus Sign
+            MOVE.W      os_incL,D0              ;Get the length
+            BSR         send_instr_buf          ;Add Plus Sign to buffer after Close Paren
+            RTS                                 ;Return
+            
+*Indirect Address Register with Pre-Decrement - -(An)
+aeindex0100 LEA         os_dec,A1               ;ASCII for Minus Sign
+            MOVE.W      os_decL,D1              ;Get the length
+            BSR         send_instr_buf          ;Add Minus Sign to Buffer
+
+            CLR.L       D1                      ;Clear Register
+            LEA	        os_oParen,A1	        ;ASCII for Open Paren
+		    MOVE.W	    os_oParenL,D1	        ;Get the length
+		    BSR	        add_instr_buf	        ;Add the Paren to the buffer
+		    
+		    CLR.L	    D0		                ;Empty data register
+		    MOVE	    D2,D0		            ;Store EA bits (6bits)
+		    ANDI	    #7,D0		            ;AND with 3-bits to get values
+		    BSR	        send_addr_buf           ;Add Address to buffer after Open Paren
+
+		    CLR.L	    D1		                ;Empty data register
+		    LEA	        os_cParen,A1	        ;ASCII for Close Paren
+		    MOVE.W	    os_cParenL,D1	        ;Get the length
+		    BSR	        send_instr_buf          ;Add Close Paren to buffer after addr
+            RTS                                 ;Return
+
+*Now need to Create different routines for each type of input (Byte,Word & Long) 
+
+
+  
 *******************************************************************************
 *                               End EA Routine
 *******************************************************************************
@@ -1187,8 +1282,12 @@ overflow_clear
 overflow_set
 
             END         start
-		    
 
+
+*~Font name~Courier New~
+*~Font size~10~
+*~Tab type~1~
+*~Tab size~4~
 *~Font name~Courier New~
 *~Font size~10~
 *~Tab type~1~
