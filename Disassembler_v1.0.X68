@@ -434,92 +434,150 @@ tempOutL    DC.W        41
 * --bool bit, still not sure which register to use
 * --OCR = Op-code routine
 * --JSR OCR is a temporary call, remove when I/O actual utilizes subroutine
-            JSR         OCR         
+            BSR         OCR         
 OCR ; subroutine called by I/O
             LEA         BUFFER,A6   ; declared at end of op-code routine
-
+            MOVE        #$4E71,D1   ; test NOP
+            
 * Isolate bits d12-d15 and assign them to register D1
-            MOVE.W      D0,D1       ; avoid overwrite of original
-            ROL.W       #4,D1       ; move d12-d15 -> d0-d3
-            ANDI.W      #$F,D1      ; mask to keep only four bits
-                                    ; potentially unnecessary step
+            MOVEQ       #3,D0       ; Iso-task 3: isolate d12-d15
+            BSR         ISO_BITS
+            
+* Now that bits are isolated, compare and branch
+            CMP.B       #0,D2
+            BEQ         ZERO        ; ORI, ANDI, SUBI, EORI, COMPI
+            CMP.B       #1,D2
+            BEQ         ONE         ; MOVE.B
+            CMP.B       #2,D2
+            BEQ         TWO         ; MOVE.W, MOVEA.W
+            CMP.B       #3,D2
+            BEQ         THREE       ; MOVE.L, MOVEA.L
+            CMP.B       #4,D2
+            BEQ         FOUR        ; NEG,NOP,RTS,JSR,JMP
+            CMP.B       #5,D2
+            BEQ         FIVE        ; ADDQ
+            CMP.B       #6,D2
+            BEQ         SIX         ; Bcc
+            CMP.B       #8,D2
+            BEQ         EIGHT       ; OR
+            CMP.B       #9,D2
+            BEQ         NINE        ; SUBA
+            CMP.B       #11,D2
+            BEQ         ELEVEN      ; EOR, CMP, CMPA
+            CMP.B       #12,D2
+            BEQ         TWELVE      ; AND
+            CMP.B       #13,D2
+            BEQ         THIRTEEN    ; ADDA
+            CMP.B       #14,D2
+            BEQ         FOURTEEN    ; ASd, ROd
+            BNE         GEN_DATA    ; Generic, value not recognized
+
+ZERO ; ORI, ANDI, SUBI, EORI, COMPI
+            MOVEQ       #2,D0       ; Iso-task 2: isolate d9-d11
+            BSR         ISO_BITS
+            
+* Now that bits are isolated, compare and branch
+            CMP.B       #0,D2
+            BEQ         ZERO_0      ; ORI
+            CMP.B       #1,D2
+            BEQ         ZERO_1      ; ANDI
+            CMP.B       #2,D2
+            BEQ         ZERO_2      ; SUBI
+            CMP.B       #5,D2
+            BEQ         ZERO_5      ; EORI
+            CMP.B       #6,D2
+            BEQ         ZERO_6      ; CMPI
+            BNE         GEN_DATA    ; Generic, value not recognized
+
+ZERO_0 ; ORI
+            MOVEQ       #1,D0       ; Iso-task 1: isolate d6-d8
+            BSR         ISO_BITS
 
 * Now that bits are isolated, compare and branch
-            CMP.B       #$00,D1
-            BEQ         ZERO        ; ORI, ANDI, SUBI, EORI, COMPI
-            CMP.B       #$01,D1
-            BEQ         ONE         ; MOVE.B
-            CMP.B       #$02,D1
-            BEQ         TWO         ; MOVE.W, MOVEA.W
-            CMP.B       #$03,D1
-            BEQ         THREE       ; MOVE.L, MOVEA.L
-            CMP.B       #$04,D1
-            BEQ         FOUR        ; NEG,NOP,RTS,JSR,JMP
-            CMP.B       #$05,D1
-            BEQ         FIVE        ; ADDQ
-            CMP.B       #$06,D1
-            BEQ         SIX         ; Bcc
-            CMP.B       #$08,D1
-            BEQ         EIGHT       ; OR
-            CMP.B       #$09,D1
-            BEQ         NINE        ; SUBA
-            CMP.B       #$0B,D1
-            BEQ         B_          ; EOR, CMP, CMPA
-            CMP.B       #$0C,D1
-            BEQ         C_          ; AND
-            CMP.B       #$0D,D1
-            BEQ         D_          ; ADDA
-            CMP.B       #$0E,D1
-            BEQ         E_          ; ASd, ROd
-            BNE         DATA        ; Generic, value not recognized
+            CMP.B       #0,D2
+            BEQ         ZERO_0_0    ; ORI.B
+            CMP.B       #1,D2
+            BEQ         ZERO_0_1    ; ORI.W
+            CMP.B       #2,D2
+            BEQ         ZERO_0_2    ; ORI.L
 
-ZERO
-ONE
-TWO
-THREE
+ZERO_0_0 ; ORI.B
+            MOVE.L      #'ORI.B',(A6)+    ; push to buffer
+            RTS                         	; return to I/O
+
+ZERO_0_1 ; ORI.W
+            MOVE.L      #'ORI.W',(A6)+    ; push to buffer
+            RTS                         	; return to I/O
+
+ZERO_0_2 ; ORI.L
+            MOVE.L      #'ORI.L',(A6)+    ; push to buffer
+            RTS                         	; return to I/O
+
+ZERO_1 ; ANDI
+            MOVEQ       #1,D0       ; Iso-task 1: isolate d6-d8
+            BSR         ISO_BITS
+            
+ZERO_2 ; SUBI
+            MOVEQ       #1,D0       ; Iso-task 1: isolate d6-d8
+            BSR         ISO_BITS
+            
+ZERO_5 ; EORI
+            MOVEQ       #1,D0       ; Iso-task 1: isolate d6-d8
+            BSR         ISO_BITS
+            
+ZERO_6 ; CMPI
+            MOVEQ       #1,D0       ; Iso-task 1: isolate d6-d8
+            BSR         ISO_BITS
+            
+ONE ; MOVE.B
+            MOVEQ       #2,D0       ; Iso-task 2: isolate d9-d11
+            BSR         ISO_BITS
+
+TWO ; MOVE.W, MOVEA.W
+            MOVEQ       #2,D0       ; Iso-task 2: isolate d9-d11
+            BSR         ISO_BITS
+
+THREE ; MOVE.L, MOVEA.L
+            MOVEQ       #2,D0       ; Iso-task 2: isolate d9-d11
+            BSR         ISO_BITS
 
 FOUR ; NEG,NOP,RTS,JSR,JMP
-* Isolate bits d9-d11 and assign them to register D2
-            MOVE.W      D0,D2       ; avoid overwrite of original
-            ROL.W       #7,D2       ; move d8-d11 -> d0-d2
-            ANDI.W      #$7,D2      ; mask to keep only three bits
-
+            MOVEQ       #2,D0       ; Iso-task 2: isolate d9-d11
+            BSR         ISO_BITS
+            
 * Now that bits are isolated, compare and branch
-            CMP.B       #$02,D2
+            CMP.B       #2,D2
             BEQ         FOUR_2      ; NEG
-            CMP.B       #$07,D2
+            CMP.B       #7,D2
             BEQ         FOUR_7      ; NOP, RTS, JSR, JMP
-            BNE         DATA        ; Generic, value not recognized
- 
+            BNE         GEN_DATA    ; Generic, value not recognized
+
 FOUR_2 ; NEG
 * Isolate bits d0-d5 and send them to EA routine
 
 FOUR_7 ; NOP, RTS, JSR, JMP
-* Isolate bits d6-d8 and assign them to register D3
-            MOVE.W      D0,D3       ; avoid overwrite of original
-            ROR.W       #6,D3       ; move d6-d8 -> d0-d2
-            ANDI.W      #$7,D3      ; mask to keep only three bits
-
+            MOVEQ       #1,D0       ; Iso-task 1: isolate d6-d8
+            BSR         ISO_BITS
+            
 * Now that bits are isolated, compare and branch
-            CMP.B       #$01,D3
+            CMP.B       #1,D2
             BEQ         FOUR_7_1    ; NOP, RTS
-            CMP.B       #$02,D3     
+            CMP.B       #2,D2     
             BEQ         FOUR_7_2    ; JSR
-            CMP.B       #$03,D3     
+            CMP.B       #3,D2     
             BEQ         FOUR_7_3    ; JMP
-            BNE         DATA        ; Generic, value not recognized
+            BNE         GEN_DATA    ; Generic, value not recognized
 
 FOUR_7_1 ; NOP, RTS
-* Isolate bits d0-d5 and assign them to register D4
-            MOVE.W      D0,D4       ; avoid overwrite of original
-            ANDI.W      #$3F,D4     ; mask to keep only six bits
+            MOVEQ       #0,D0       ; Iso-task 0: isolate d0-d5
+            BSR         ISO_BITS
 
 * Now that bits are isolated, compare and branch
-            CMP.B       #$31,D4
+            CMP.B       #$31,D2
             BEQ         FOUR_7_1_31 ; NOP
-            CMP.B       #$35,D4     
+            CMP.B       #$35,D2     
             BEQ         FOUR_7_1_35 ; RTS
-            BNE         DATA        ; Generic, value not recognized
+            BNE         GEN_DATA    ; Generic, value not recognized
 
 FOUR_7_1_31 ; NOP
 * Push NOP onto buffer
@@ -528,17 +586,79 @@ FOUR_7_1_31 ; NOP
 
 FOUR_7_1_35 ; RTS
 * Push RTS onto buffer
+
 FOUR_7_2
+
 FOUR_7_3
-FIVE
-SIX
-EIGHT
-NINE
-B_
-c_
-D_
-E_
-DATA
+
+FIVE ; ADDQ
+            MOVEQ       #2,D0       ; Iso-task 2: isolate d9-d11
+            BSR         ISO_BITS
+
+SIX ; Bcc
+            MOVEQ       #2,D0       ; Iso-task 2: isolate d9-d11
+            BSR         ISO_BITS
+
+EIGHT ; OR
+            MOVEQ       #2,D0       ; Iso-task 2: isolate d9-d11
+            BSR         ISO_BITS
+
+NINE ; SUBA
+            MOVEQ       #2,D0       ; Iso-task 2: isolate d9-d11
+            BSR         ISO_BITS
+
+ELEVEN ; EOR, CMP, CMPA
+            MOVEQ       #2,D0       ; Iso-task 2: isolate d9-d11
+            BSR         ISO_BITS
+
+TWELVE ; AND
+            MOVEQ       #2,D0       ; Iso-task 2: isolate d9-d11
+            BSR         ISO_BITS
+
+THIRTEEN ; ADDA
+            MOVEQ       #2,D0       ; Iso-task 2: isolate d9-d11
+            BSR         ISO_BITS
+
+FOURTEEN ; ASd, ROd
+            MOVEQ       #2,D0       ; Iso-task 2: isolate d9-d11
+            BSR         ISO_BITS
+
+GEN_DATA ; Generic, value not recognized
+
+
+ISO_BITS		; Subroutine: Isolates bits based on the task # assigned to D0
+            CMP.B       #0,D0       ; Task 0, isolate d0-d5
+            BEQ         D0to5
+            CMP.B       #1,D0       ; Task 1, isolate d6-d8
+            BEQ         D6to8
+            CMP.B       #2,D0       ; Task 2, isolate d9-d11
+            BEQ         D9to11
+            CMP.B       #3,D0       ; Task 3, isolate d12-d15
+            BEQ         D12to15
+            RTS
+
+D12to15 ; Isolate bits d12-d15 and assign them to register D2
+            MOVE.W      D1,D2       ; avoid overwrite of original
+            ROL.W       #4,D2       ; move d12-d15 -> d0-d3
+            ANDI.W      #$F,D2      ; mask to keep only four bits
+            RTS
+
+D9to11  ; Isolate bits d9-d11 and assign them to register D2
+            MOVE.W      D1,D2       ; avoid overwrite of original
+            ROL.W       #7,D2       ; move d8-d11 -> d0-d2
+            ANDI.W      #$7,D2      ; mask to keep only three bits
+            RTS
+
+D6to8   ; Isolate bits d6-d8 and assign them to register D2
+            MOVE.W      D1,D2       ; avoid overwrite of original
+            ROR.W       #6,D2       ; move d6-d8 -> d0-d2
+            ANDI.W      #$7,D2      ; mask to keep only three bits
+            RTS
+
+D0to5   ; Isolate bits d0-d5 and assign them to register D4
+            MOVE.W      D1,D2       ; avoid overwrite of original
+            ANDI.W      #$3F,D2     ; mask to keep only six bits
+            RTS
 
 BUFFER      DS.L        50 ; temp buffer used until we establish real buffer
 
