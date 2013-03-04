@@ -434,7 +434,17 @@ tempOutL    DC.W        41
 * --bool bit, still not sure which register to use
 * --OCR = Op-code routine
 * --JSR OCR is a temporary call, remove when I/O actual utilizes subroutine
-            BSR         OCR         
+
+*************************** DEV TEST PURPOSES ONLY ****************************
+            BSR         OCR         ; call routine
+            LEA         BUFFER,A2   ; load register for display
+            MOVEA.W     (A2)+,A1 
+            MOVEQ       #14,D0      ; load trap task to display
+            TRAP        #15         ; display
+
+            SIMHALT                 ; don't go into routine w/out being called 
+************************** END OF DEV TEST PURPOSES ***************************
+
 OCR ; subroutine called by I/O
             LEA         BUFFER,A6   ; declared at end of op-code routine
             MOVE        #$4E71,D1   ; test NOP
@@ -445,188 +455,189 @@ OCR ; subroutine called by I/O
             
 * Now that bits are isolated, compare and branch
             CMP.B       #0,D2
-            BEQ         ZERO        ; ORI, ANDI, SUBI, EORI, COMPI
+            BEQ         OCR_0       ; ORI, ANDI, SUBI, EORI, COMPI
             CMP.B       #1,D2
-            BEQ         ONE         ; MOVE.B
+            BEQ         OCR_1       ; MOVE.B
             CMP.B       #2,D2
-            BEQ         TWO         ; MOVE.W, MOVEA.W
+            BEQ         OCR_2       ; MOVE.W, MOVEA.W
             CMP.B       #3,D2
-            BEQ         THREE       ; MOVE.L, MOVEA.L
+            BEQ         OCR_3       ; MOVE.L, MOVEA.L
             CMP.B       #4,D2
-            BEQ         FOUR        ; NEG,NOP,RTS,JSR,JMP
+            BEQ         OCR_4       ; NEG,NOP,RTS,JSR,JMP
             CMP.B       #5,D2
-            BEQ         FIVE        ; ADDQ
+            BEQ         OCR_5       ; ADDQ
             CMP.B       #6,D2
-            BEQ         SIX         ; Bcc
+            BEQ         OCR_6       ; Bcc
             CMP.B       #8,D2
-            BEQ         EIGHT       ; OR
+            BEQ         OCR_8       ; OR
             CMP.B       #9,D2
-            BEQ         NINE        ; SUBA
+            BEQ         OCR_9       ; SUBA
             CMP.B       #11,D2
-            BEQ         ELEVEN      ; EOR, CMP, CMPA
+            BEQ         OCR_11      ; EOR, CMP, CMPA
             CMP.B       #12,D2
-            BEQ         TWELVE      ; AND
+            BEQ         OCR_12      ; AND
             CMP.B       #13,D2
-            BEQ         THIRTEEN    ; ADDA
+            BEQ         OCR_13      ; ADDA
             CMP.B       #14,D2
-            BEQ         FOURTEEN    ; ASd, ROd
+            BEQ         OCR_14      ; ASd, ROd
             BNE         GEN_DATA    ; Generic, value not recognized
 
-ZERO ; ORI, ANDI, SUBI, EORI, COMPI
+OCR_0 ; ORI, ANDI, SUBI, EORI, COMPI
             MOVEQ       #2,D0       ; Iso-task 2: isolate d9-d11
             BSR         ISO_BITS
             
 * Now that bits are isolated, compare and branch
             CMP.B       #0,D2
-            BEQ         ZERO_0      ; ORI
+            BEQ         OCR_0_0     ; ORI
             CMP.B       #1,D2
-            BEQ         ZERO_1      ; ANDI
+            BEQ         OCR_0_1     ; ANDI
             CMP.B       #2,D2
-            BEQ         ZERO_2      ; SUBI
+            BEQ         OCR_0_2     ; SUBI
             CMP.B       #5,D2
-            BEQ         ZERO_5      ; EORI
+            BEQ         OCR_0_5     ; EORI
             CMP.B       #6,D2
-            BEQ         ZERO_6      ; CMPI
+            BEQ         OCR_0_6     ; CMPI
             BNE         GEN_DATA    ; Generic, value not recognized
 
-ZERO_0 ; ORI
+OCR_0_0 ; ORI
+            MOVE.W      #_ORI,(A6)+ ; push address of ORI to buffer
             MOVEQ       #1,D0       ; Iso-task 1: isolate d6-d8
             BSR         ISO_BITS
 
 * Now that bits are isolated, compare and branch
             CMP.B       #0,D2
-            BEQ         ZERO_0_0    ; ORI.B
+            BEQ         OCR_0_0_0   ; ORI.B
             CMP.B       #1,D2
-            BEQ         ZERO_0_1    ; ORI.W
+            BEQ         OCR_0_0_1   ; ORI.W
             CMP.B       #2,D2
-            BEQ         ZERO_0_2    ; ORI.L
+            BEQ         OCR_0_0_2   ; ORI.L
 
-ZERO_0_0 ; ORI.B
-            MOVE.L      #'ORI.B',(A6)+    ; push to buffer
-            RTS                         	; return to I/O
+OCR_0_0_0 ; ORI.B
+            MOVE.W      #_B,(A6)+   ; push address of .B to buffer
+            RTS                     ; return to I/O
 
-ZERO_0_1 ; ORI.W
-            MOVE.L      #'ORI.W',(A6)+    ; push to buffer
-            RTS                         	; return to I/O
+OCR_0_0_1 ; ORI.W
+            MOVE.W      #_W,(A6)+   ; push address of .W to buffer
+            RTS                     ; return to I/O
 
-ZERO_0_2 ; ORI.L
-            MOVE.L      #'ORI.L',(A6)+    ; push to buffer
-            RTS                         	; return to I/O
+OCR_0_0_2 ; ORI.L
+            MOVE.W      #_L,(A6)+   ; push address of .L to buffer
+            RTS                     ; return to I/O
 
-ZERO_1 ; ANDI
+OCR_0_1 ; ANDI
             MOVEQ       #1,D0       ; Iso-task 1: isolate d6-d8
             BSR         ISO_BITS
             
-ZERO_2 ; SUBI
+OCR_0_2 ; SUBI
             MOVEQ       #1,D0       ; Iso-task 1: isolate d6-d8
             BSR         ISO_BITS
             
-ZERO_5 ; EORI
+OCR_0_5 ; EORI
             MOVEQ       #1,D0       ; Iso-task 1: isolate d6-d8
             BSR         ISO_BITS
             
-ZERO_6 ; CMPI
+OCR_0_6 ; CMPI
             MOVEQ       #1,D0       ; Iso-task 1: isolate d6-d8
             BSR         ISO_BITS
             
-ONE ; MOVE.B
+OCR_1 ; MOVE.B
             MOVEQ       #2,D0       ; Iso-task 2: isolate d9-d11
             BSR         ISO_BITS
 
-TWO ; MOVE.W, MOVEA.W
+OCR_2 ; MOVE.W, MOVEA.W
             MOVEQ       #2,D0       ; Iso-task 2: isolate d9-d11
             BSR         ISO_BITS
 
-THREE ; MOVE.L, MOVEA.L
+OCR_3 ; MOVE.L, MOVEA.L
             MOVEQ       #2,D0       ; Iso-task 2: isolate d9-d11
             BSR         ISO_BITS
 
-FOUR ; NEG,NOP,RTS,JSR,JMP
+OCR_4 ; NEG,NOP,RTS,JSR,JMP
             MOVEQ       #2,D0       ; Iso-task 2: isolate d9-d11
             BSR         ISO_BITS
             
 * Now that bits are isolated, compare and branch
             CMP.B       #2,D2
-            BEQ         FOUR_2      ; NEG
+            BEQ         OCR_4_2     ; NEG
             CMP.B       #7,D2
-            BEQ         FOUR_7      ; NOP, RTS, JSR, JMP
+            BEQ         OCR_4_7     ; NOP, RTS, JSR, JMP
             BNE         GEN_DATA    ; Generic, value not recognized
 
-FOUR_2 ; NEG
+OCR_4_2 ; NEG
 * Isolate bits d0-d5 and send them to EA routine
 
-FOUR_7 ; NOP, RTS, JSR, JMP
+OCR_4_7 ; NOP, RTS, JSR, JMP
             MOVEQ       #1,D0       ; Iso-task 1: isolate d6-d8
             BSR         ISO_BITS
             
 * Now that bits are isolated, compare and branch
             CMP.B       #1,D2
-            BEQ         FOUR_7_1    ; NOP, RTS
+            BEQ         OCR_4_7_1   ; NOP, RTS
             CMP.B       #2,D2     
-            BEQ         FOUR_7_2    ; JSR
+            BEQ         OCR_4_7_2   ; JSR
             CMP.B       #3,D2     
-            BEQ         FOUR_7_3    ; JMP
+            BEQ         OCR_4_7_3   ; JMP
             BNE         GEN_DATA    ; Generic, value not recognized
 
-FOUR_7_1 ; NOP, RTS
+OCR_4_7_1 ; NOP, RTS
             MOVEQ       #0,D0       ; Iso-task 0: isolate d0-d5
             BSR         ISO_BITS
 
 * Now that bits are isolated, compare and branch
             CMP.B       #$31,D2
-            BEQ         FOUR_7_1_31 ; NOP
+            BEQ         OCR_4_7_1_31    ; NOP
             CMP.B       #$35,D2     
-            BEQ         FOUR_7_1_35 ; RTS
-            BNE         GEN_DATA    ; Generic, value not recognized
+            BEQ         OCR_4_7_1_35    ; RTS
+            BNE         GEN_DATA        ; Generic, value not recognized
 
-FOUR_7_1_31 ; NOP
+OCR_4_7_1_31 ; NOP
 * Push NOP onto buffer
-            MOVE.L      #'NOP',(A6)+    ; push 'NOP' to buffer
+            MOVE.W      #_NOP,(A6)+     ; push address of NOP to buffer
             RTS                         ; return to I/O
 
-FOUR_7_1_35 ; RTS
+OCR_4_7_1_35 ; RTS
 * Push RTS onto buffer
 
-FOUR_7_2
+OCR_4_7_2
 
-FOUR_7_3
+OCR_4_7_3
 
-FIVE ; ADDQ
+OCR_5 ; ADDQ
             MOVEQ       #2,D0       ; Iso-task 2: isolate d9-d11
             BSR         ISO_BITS
 
-SIX ; Bcc
+OCR_6 ; Bcc
             MOVEQ       #2,D0       ; Iso-task 2: isolate d9-d11
             BSR         ISO_BITS
 
-EIGHT ; OR
+OCR_8 ; OR
             MOVEQ       #2,D0       ; Iso-task 2: isolate d9-d11
             BSR         ISO_BITS
 
-NINE ; SUBA
+OCR_9 ; SUBA
             MOVEQ       #2,D0       ; Iso-task 2: isolate d9-d11
             BSR         ISO_BITS
 
-ELEVEN ; EOR, CMP, CMPA
+OCR_11 ; EOR, CMP, CMPA
             MOVEQ       #2,D0       ; Iso-task 2: isolate d9-d11
             BSR         ISO_BITS
 
-TWELVE ; AND
+OCR_12 ; AND
             MOVEQ       #2,D0       ; Iso-task 2: isolate d9-d11
             BSR         ISO_BITS
 
-THIRTEEN ; ADDA
+OCR_13 ; ADDA
             MOVEQ       #2,D0       ; Iso-task 2: isolate d9-d11
             BSR         ISO_BITS
 
-FOURTEEN ; ASd, ROd
+OCR_14 ; ASd, ROd
             MOVEQ       #2,D0       ; Iso-task 2: isolate d9-d11
             BSR         ISO_BITS
 
 GEN_DATA ; Generic, value not recognized
 
 
-ISO_BITS		; Subroutine: Isolates bits based on the task # assigned to D0
+ISO_BITS        ; Subroutine: Isolates bits based on the task # assigned to D0
             CMP.B       #0,D0       ; Task 0, isolate d0-d5
             BEQ         D0to5
             CMP.B       #1,D0       ; Task 1, isolate d6-d8
@@ -660,7 +671,37 @@ D0to5   ; Isolate bits d0-d5 and assign them to register D4
             ANDI.W      #$3F,D2     ; mask to keep only six bits
             RTS
 
-BUFFER      DS.L        50 ; temp buffer used until we establish real buffer
+_B          DC.W         '.B'
+_W          DC.W         '.W'
+_L          DC.W         '.L'
+_ORI        DC.L         'ORI'
+_ANDI       DC.L         'ANDI'
+_SUBI       DC.L         'SUBI'
+_EORI       DC.L         'EORI'
+_COMPI      DC.L         'COMPI'
+_MOVE       DC.L         'MOVE'
+_MOVEA      DC.L         'MOVEA'
+_NEG        DC.L         'NEG'
+_NOP        DC.L         'NOP'
+_RTS        DC.L         'RTS'
+_JSR        DC.L         'JSR'
+_JMP        DC.L         'JMP'
+_ADDQ       DC.L         'ADDQ'
+_Bcc        DC.L         'Bcc'
+_OR         DC.W         'OR'
+_SUBA       DC.L         'SUBA'
+_EOR        DC.L         'EOR'
+_CMP        DC.L         'CMP'
+_CMPA       DC.L         'CMPA'
+_AND        DC.L         'AND'
+_ADDA       DC.L         'ADDA'
+_ASL        DC.L         'ASL'
+_ASR        DC.L         'ASR'
+_ROL        DC.L         'ROL'
+_ROR        DC.L         'ROR'
+
+BUFFER      DS.W          80    ; buffer stores addresses of defined constants
+
 
 *******************************************************************************
 *                            End Op-code Routine
