@@ -436,288 +436,380 @@ tempOutL    DC.W        41
 * --JSR OCR is a temporary call, remove when I/O actual utilizes subroutine
 
 OCR ; subroutine called by I/O
-            MOVE.L      D3,D1       ; D3 could be any register from I/O      
+            MOVE.L      D3,D1   ; D3 could be any register from I/O      
 
-            MOVEQ       #3,D0       ; Iso-task 3: isolate d12-d15
+            MOVEQ       #3,D0                   ; Iso-task 3: isolate d12-d15
             BSR         ISO_BITS
-                                    **Branches**
+                                                **Branches**
             CMP.B       #0,D2
-            BEQ         OCR_0       ; ORI, ANDI, SUBI, EORI, COMPI
-            CMP.B       #1,D2
-            BEQ         OCR_1       ; MOVE.B
-            CMP.B       #2,D2
-            BEQ         OCR_2       ; MOVE.W, MOVEA.W
+            BEQ         ORI_ANDI_SUBI_ADDI_EORI_CMPI ; ORI,ANDI,SUBI,EORI,CMPI
             CMP.B       #3,D2
-            BEQ         OCR_3       ; MOVE.L, MOVEA.L
+            BLE         MOVE_MOVEA              ; MOVE, MOVEA
             CMP.B       #4,D2
-            BEQ         OCR_4       ; NEG,NOP,RTS,JSR,JMP
+            BEQ         NEG_NOP_RTS_JSR_JMP     ; NEG, NOP, RTS, JSR, JMP
             CMP.B       #5,D2
-            BEQ         OCR_5       ; ADDQ
+            BEQ         ADDQ_                   ; ADDQ
             CMP.B       #6,D2
-            BEQ         OCR_6       ; Bcc
+            BEQ         B_                      ; Bcc
             CMP.B       #8,D2
-            BEQ         OCR_8       ; OR
+            BEQ         OR_                     ; OR
             CMP.B       #9,D2
-            BEQ         OCR_9       ; SUBA
+            BEQ         SUBA_                   ; SUBA
             CMP.B       #11,D2
-            BEQ         OCR_11      ; EOR, CMP, CMPA
+            BEQ         EOR_CMP_CMPA            ; EOR, CMP, CMPA
             CMP.B       #12,D2
-            BEQ         OCR_12      ; AND
+            BEQ         AND_                    ; AND
             CMP.B       #13,D2
-            BEQ         OCR_13      ; ADDA
+            BEQ         ADDA_                   ; ADDA
             CMP.B       #14,D2
-            BEQ         OCR_14      ; ASd, ROd
-            BNE         DATA        ; value not recognized
+            BEQ         ASd_ROd                 ; ASd, ROd
+            BRA         DATA                    ; value not recognized
 
-*********************** ORI, ANDI, SUBI, EORI, COMPI **************************
-OCR_0
-            MOVEQ       #2,D0       ; Iso-task 2: isolate d9-d11
+************************ ORI, ANDI, SUBI, EORI, CMPI **************************
+ORI_ANDI_SUBI_ADDI_EORI_CMPI
+            MOVEQ       #2,D0                   ; Iso-task 2: isolate d9-d11
             BSR         ISO_BITS
-                                    **Branches**
+                                                **Branches**
             CMP.B       #0,D2
-            BEQ         OCR_0_0     ; ORI
+            BEQ         ORI_                    ; ORI
             CMP.B       #1,D2
-            BEQ         OCR_0_1     ; ANDI
+            BEQ         ANDI_                   ; ANDI
             CMP.B       #2,D2
-            BEQ         OCR_0_2     ; SUBI
+            BEQ         SUBI_                   ; SUBI
+            CMP.B       #3,D2
+            BEQ         ADDI_                   ; ADDI
             CMP.B       #5,D2
-            BEQ         OCR_0_5     ; EORI
+            BEQ         EORI_                   ; EORI
             CMP.B       #6,D2
-            BEQ         OCR_0_6     ; CMPI
-            BNE         DATA        ; value not recognized
+            BEQ         CMPI_                   ; CMPI
+            BRA         DATA                    ; value not recognized
 
 ************************************* ORI *************************************
-OCR_0_0
-            MOVE.W      #_ORI,(A6)+ ; push address of ORI to buffer
-            MOVEQ       #1,D0       ; Iso-task 1: isolate bits d6-d7
+ORI_
+            MOVE.W      #_ORI,(A6)+         ; push address of ORI to buffer
+            MOVEQ       #1,D0               ; Iso-task 1: isolate bits d6-d7
             BSR         ISO_BITS
-            BSR         BWL         ; append .B, .W, or .L
-            * Isolate bits d0-d5 and send them to EA routine
-            RTS                     ; return to I/O
+            BSR         BWL                 ; append .B, .W, or .L
+    * Isolate bits d0-d5 and send them to EA routine before return
+            RTS                             ; return to I/O
 
 ************************************ ANDI *************************************
-OCR_0_1
-            MOVE.W      #_ANDI,(A6)+ ; push address of ANDI to buffer
-            MOVEQ       #1,D0       ; Iso-task 1: isolate bits d6-d7
+ANDI_
+            MOVE.W      #_ANDI,(A6)+        ; push address of ANDI to buffer
+            MOVEQ       #1,D0               ; Iso-task 1: isolate bits d6-d7
             BSR         ISO_BITS
-            BSR         BWL         ; append .B, .W, or .L
-            * Isolate bits d0-d5 and send them to EA routine
-            RTS                     ; return to I/O
+            BSR         BWL                 ; append .B, .W, or .L
+    * Isolate bits d0-d5 and send them to EA routine before return
+            RTS                             ; return to I/O
 
 ************************************ SUBI *************************************
-OCR_0_2
-            MOVE.W      #_SUBI,(A6)+ ; push address of SUBI to buffer
-            MOVEQ       #1,D0       ; Iso-task 1: isolate bits d6-d7
+SUBI_
+            MOVE.W      #_SUBI,(A6)+        ; push address of SUBI to buffer
+            MOVEQ       #1,D0               ; Iso-task 1: isolate bits d6-d7
             BSR         ISO_BITS
-            BSR         BWL         ; append .B, .W, or .L
-            * Isolate bits d0-d5 and send them to EA routine
-            RTS                     ; return to I/O
+            BSR         BWL                 ; append .B, .W, or .L
+    * Isolate bits d0-d5 and send them to EA routine before return
+            RTS                             ; return to I/O
+
+************************************ ADDI *************************************
+ADDI_
+            MOVE.W      #_ADDI,(A6)+        ; push address of ADDI to buffer
+            MOVEQ       #1,D0               ; Iso-task 1: isolate bits d6-d7
+            BSR         ISO_BITS
+            BSR         BWL                 ; append .B, .W, or .L
+    * Isolate bits d0-d5 and send them to EA routine before return
+            RTS                             ; return to I/O
 
 ************************************ EORI *************************************
-OCR_0_5
-            MOVE.W      #_EORI,(A6)+ ; push address of EORI to buffer
-            MOVEQ       #1,D0       ; Iso-task 1: isolate bits d6-d7
+EORI_
+            MOVE.W      #_EORI,(A6)+        ; push address of EORI to buffer
+            MOVEQ       #1,D0               ; Iso-task 1: isolate bits d6-d7
             BSR         ISO_BITS
-            BSR         BWL         ; append .B, .W, or .L
-            * Isolate bits d0-d5 and send them to EA routine
-            RTS                     ; return to I/O
+            BSR         BWL                 ; append .B, .W, or .L
+    * Isolate bits d0-d5 and send them to EA routine before return
+            RTS                             ; return to I/O
             
 ************************************ CMPI *************************************
-OCR_0_6
-            MOVE.W      #_CMPI,(A6)+ ; push address of CMPI to buffer
-            MOVEQ       #1,D0       ; Iso-task 1: isolate bits d6-d7
+CMPI_
+            MOVE.W      #_CMPI,(A6)+        ; push address of CMPI to buffer
+            MOVEQ       #1,D0               ; Iso-task 1: isolate bits d6-d7
             BSR         ISO_BITS
-            BSR         BWL         ; append .B, .W, or .L
-            * Isolate bits d0-d5 and send them to EA routine
-            RTS                     ; return to I/O
-*******************************************************************************
-            
-*********************************** MOVE.B ************************************
-OCR_1
-*******************************************************************************
+            BSR         BWL                 ; append .B, .W, or .L
+    * Isolate bits d0-d5 and send them to EA routine before return
+            RTS                             ; return to I/O
 
-****************************** MOVE.W, MOVEA.W ********************************
-OCR_2
-*******************************************************************************
+******************************** MOVE, MOVEA **********************************
+MOVE_MOVEA
+            MOVEQ       #1,D0               ; Iso-task 1: isolate bits d6-d7
+            BSR         ISO_BITS
+            CMP.B       #1,D2
+            BEQ         MOVEA_
+            BRA         MOVE_
 
-****************************** MOVE.L, MOVEA.L ********************************
-OCR_3
-*******************************************************************************
+*********************************** MOVEA *************************************
+MOVEA_
+            MOVE.W      #_MOVEA,(A6)+        ; push address of MOVEA to buffer
+            MOVEQ       #3,D0               ; Iso-task 3: isolate d12-d15
+            BSR         ISO_BITS
+            BSR         BLW                 ; append .B, .W, or .L
+    * Isolate bits d0-d5 and send them to EA routine before return
+            RTS                             ; return to I/O        
+
+************************************ MOVE *************************************
+MOVE_
+            MOVE.W      #_MOVE,(A6)+        ; push address of MOVE to buffer
+            MOVEQ       #3,D0               ; Iso-task 3: isolate d12-d15
+            BSR         ISO_BITS
+            BSR         BLW                 ; append .B, .W, or .L
+    * Isolate bits d0-d5 and send them to EA routine before return
+            RTS                             ; return to I/O        
 
 ************************** NEG, NOP, RTS, JSR, JMP ****************************
-OCR_4
-            MOVEQ       #2,D0           ; Iso-task 2: isolate d9-d11
+NEG_NOP_RTS_JSR_JMP
+            MOVEQ       #2,D0               ; Iso-task 2: isolate d9-d11
             BSR         ISO_BITS
-                                        **Branches**
+                                            **Branches**
             CMP.B       #2,D2
-            BEQ         OCR_4_2         ; NEG
+            BEQ         NEG_                ; NEG
             CMP.B       #7,D2
-            BEQ         OCR_4_7         ; NOP, RTS, JSR, JMP
-            BNE         DATA            ; value not recognized
+            BEQ         NOP_RTS_JSR_JMP     ; NOP, RTS, JSR, JMP
+            BRA         DATA                ; value not recognized
 
 ************************************* NEG *************************************
-OCR_4_2
-            MOVE.W      #_NEG,(A6)+     ; push address of NEG to buffer
-            MOVEQ       #1,D0           ; Iso-task 1: isolate bits d6-d7
+NEG_
+            MOVE.W      #_NEG,(A6)+         ; push address of NEG to buffer
+            MOVEQ       #1,D0               ; Iso-task 1: isolate bits d6-d7
             BSR         ISO_BITS
-            BSR         BWL             ; append .B, .W, or .L
-            * Isolate bits d0-d5 and send them to EA routine
-            RTS                         ; return to I/O
+            BSR         BWL                 ; append .B, .W, or .L
+    * Isolate bits d0-d5 and send them to EA routine before return
+            RTS                             ; return to I/O
 
 ***************************** NOP, RTS, JSR, JMP ******************************
-OCR_4_7
-            MOVEQ       #1,D0           ; Iso-task 1: isolate bits d6-d7
+NOP_RTS_JSR_JMP
+            MOVEQ       #1,D0               ; Iso-task 1: isolate bits d6-d7
             BSR         ISO_BITS
 
             CMP.B       #1,D2
-            BEQ         OCR_4_7_1       ; NOP, RTS
+            BEQ         NOP_RTS             ; NOP, RTS
             CMP.B       #2,D2     
-            BEQ         OCR_4_7_2       ; JSR
+            BEQ         JSR_                ; JSR
             CMP.B       #3,D2     
-            BEQ         OCR_4_7_3       ; JMP
-            BNE         DATA            ; value not recognized
+            BEQ         JMP_                ; JMP
+            BRA         DATA                ; value not recognized
 
 ********************************** NOP, RTS ***********************************
-OCR_4_7_1
-            MOVEQ       #0,D0           ; Iso-task 0: isolate d0-d5
+NOP_RTS
+            MOVEQ       #0,D0               ; Iso-task 0: isolate d0-d5
             BSR         ISO_BITS
             CMP.B       #$31,D2
-            BEQ         OCR_4_7_1_31    ; NOP
+            BEQ         NOP_                ; NOP
             CMP.B       #$35,D2     
-            BEQ         OCR_4_7_1_35    ; RTS
-            BNE         DATA            ; value not recognized
+            BEQ         RTS_                ; RTS
+            BRA         DATA                ; value not recognized
 
 ************************************ NOP **************************************
-OCR_4_7_1_31
-            MOVE.W      #_NOP,(A6)+     ; push address of NOP to buffer
-            * Isolate bits d0-d5 and send them to EA routine
-            RTS                         ; return to I/O
+NOP_
+            MOVE.W      #_NOP,(A6)+         ; push address of NOP to buffer
+    * Isolate bits d0-d5 and send them to EA routine before return
+            RTS                             ; return to I/O
 
 ************************************ RTS **************************************
-OCR_4_7_1_35
-            MOVE.W      #_RTS,(A6)+     ; push address of RTS to buffer
-            * Isolate bits d0-d5 and send them to EA routine
-            RTS                         ; return to I/O
+RTS_
+            MOVE.W      #_RTS,(A6)+         ; push address of RTS to buffer
+    * Isolate bits d0-d5 and send them to EA routine before return
+            RTS                             ; return to I/O
 
 ************************************ JSR **************************************
-OCR_4_7_2
-            MOVE.W      #_JSR,(A6)+     ; push address of JSR to buffer
-            * Isolate bits d0-d5 and send them to EA routine
-            RTS                         ; return to I/O
+JSR_
+            MOVE.W      #_JSR,(A6)+         ; push address of JSR to buffer
+    * Isolate bits d0-d5 and send them to EA routine before return
+            RTS                             ; return to I/O
 
 ************************************ JMP **************************************
-OCR_4_7_3
-            MOVE.W      #_JMP,(A6)+     ; push address of JMP to buffer
-            * Isolate bits d0-d5 and send them to EA routine
-            RTS                         ; return to I/O
-*******************************************************************************
+JMP_
+            MOVE.W      #_JMP,(A6)+         ; push address of JMP to buffer
+    * Isolate bits d0-d5 and send them to EA routine before return
+            RTS                             ; return to I/O
 
 ************************************ ADDQ *************************************
-OCR_5
-            MOVE.W      #_ADDQ,(A6)+    ; push address of ADDQ to buffer
-            MOVEQ       #1,D0           ; Iso-task 1: isolate bits d6-d7
+ADDQ_
+            MOVE.W      #_ADDQ,(A6)+        ; push address of ADDQ to buffer
+            MOVEQ       #1,D0               ; Iso-task 1: isolate bits d6-d7
             BSR         ISO_BITS
-            BSR         BWL             ; append .B, .W, or .L
-            * Isolate bits d0-d5 and send them to EA routine
-            RTS                         ; return to I/O
-*******************************************************************************
+            BSR         BWL                 ; append .B, .W, or .L
+    * Isolate bits d0-d5 and send them to EA routine before return
+            RTS                             ; return to I/O
 
 ************************************ Bcc **************************************
-OCR_6 
-*******************************************************************************
+B_
+            MOVEQ       #5,D0               ; Iso-task 1: isolate bits d6-d7
+            BSR         ISO_BITS
+                                            **BRANCH**
+            CMP.B       #4,D2
+            BEQ         BCC_                ; BCC
+            CMP.B       #5,D2
+            BEQ         BCS_                ; BCS
+            CMP.B       #7,D2
+            BEQ         BEQ_                ; BEQ
+            CMP.B       #8,D2
+            BEQ         BVC_                ; BVC
+            CMP.B       #9,D2
+            BEQ         BVS_                ; BVS
+            BRA         DATA                ; value not recognized
+
+BCC_
+            MOVE.W      #_BCC,(A6)+         ; push address of BCC to buffer
+    * Isolate bits d0-d5 and send them to EA routine before return
+            RTS                             ; return to I/O
+
+BCS_
+            MOVE.W      #_BCS,(A6)+         ; push address of BCS to buffer
+    * Isolate bits d0-d5 and send them to EA routine before return
+            RTS                             ; return to I/O
+
+BEQ_
+            MOVE.W      #_BEQ,(A6)+         ; push address of BEQ to buffer
+    * Isolate bits d0-d5 and send them to EA routine before return
+            RTS                             ; return to I/O
+
+BVC_
+            MOVE.W      #_BVC,(A6)+         ; push address of BVC to buffer
+    * Isolate bits d0-d5 and send them to EA routine before return
+            RTS                             ; return to I/O
+
+BVS_
+            MOVE.W      #_BVS,(A6)+         ; push address of BVS to buffer
+    * Isolate bits d0-d5 and send them to EA routine before return
+            RTS                             ; return to I/O
 
 ************************************* OR **************************************
-OCR_8
-            MOVE.W      #_OR,(A6)+      ; push address of OR to buffer
-            MOVEQ       #1,D0           ; Iso-task 1: isolate bits d6-d7
+OR_
+            MOVE.W      #_OR,(A6)+          ; push address of OR to buffer
+            MOVEQ       #1,D0               ; Iso-task 1: isolate bits d6-d7
             BSR         ISO_BITS
-            BSR         BWL             ; append .B, .W, or .L
-            * Isolate bits d0-d5 and send them to EA routine
-            RTS                         ; return to I/O
-*******************************************************************************
+            BSR         BWL                 ; append .B, .W, or .L
+    * Isolate bits d0-d5 and send them to EA routine before return
+            RTS                             ; return to I/O
 
 ************************************ SUBA *************************************
-OCR_9
+SUBA_
             MOVE.W      #_SUBA,(A6)+    ; push address of SUBA to buffer
             MOVEQ       #4,D0           ; Iso-task 4: isolate bits d8
             BSR         ISO_BITS
             BSR         WL              ; .W or .L, use WL when isolating d8
-            * Isolate bits d0-d5 and send them to EA routine
+    * Isolate bits d0-d5 and send them to EA routine before return
             RTS                         ; return to I/O
-*******************************************************************************
 
 ******************************* EOR, CMP, CMPA ********************************
-OCR_11
+EOR_CMP_CMPA
             MOVEQ       #1,D0           ; Iso-task 1: isolate bits d6-d7
             BSR         ISO_BITS
 
             CMP.B       #3,D2
-            BEQ         OCR_11_3        ; CMPA
-            BRA         OCR_11_U        ; EOR, CMP
+            BEQ         CMPA_           ; CMPA
+            BRA         EOR_CMP         ; EOR, CMP
 
-OCR_11_3 ; CMPA
+************************************ CMPA *************************************
+CMPA_
             MOVE.W      #_CMPA,(A6)+    ; push address of CMPA to buffer
             MOVEQ       #4,D0           ; Iso-task 4: isolate bits d8
             BSR         ISO_BITS
             BSR         WL              ; .W or .L, use WL when isolating d8
-            * Isolate bits d0-d5 and send them to EA routine
+    * Isolate bits d0-d5 and send them to EA routine before return
             RTS                         ; return to I/O
 
-OCR_11_U ; EOR, CMP
+********************************** EOR, CMP ***********************************
+EOR_CMP
             MOVEQ       #4,D0           ; Iso-task 4: isolate bits d8
             BSR         ISO_BITS
 
             CMP.B       #0,D2
-            BEQ         OCR_11_U_0      ; CMP
-            BRA         OCR_11_U_1      ; EOR
+            BEQ         CMP_            ; CMP
+            BRA         EOR_            ; EOR
 
-OCR_11_U_0 ; CMP
-            MOVE.W      #_CMP,(A6)+ ; push address of CMP to buffer
-            MOVEQ       #1,D0       ; Iso-task 1: isolate bits d6-d7
+************************************ CMP **************************************
+CMP_
+            MOVE.W      #_CMP,(A6)+     ; push address of CMP to buffer
+            MOVEQ       #1,D0           ; Iso-task 1: isolate bits d6-d7
             BSR         ISO_BITS
-            BSR         BWL         ; append .B, .W, or .L
-            * Isolate bits d0-d5 and send them to EA routine
-            RTS                     ; return to I/O
+            BSR         BWL             ; append .B, .W, or .L
+    * Isolate bits d0-d5 and send them to EA routine before return
+            RTS                         ; return to I/O
 
-OCR_11_U_1 ; EOR
-            MOVE.W      #_EOR,(A6)+ ; push address of EOR to buffer
-            MOVEQ       #1,D0       ; Iso-task 1: isolate bits d6-d7
+************************************ EOR **************************************
+EOR_
+            MOVE.W      #_EOR,(A6)+     ; push address of EOR to buffer
+            MOVEQ       #1,D0           ; Iso-task 1: isolate bits d6-d7
             BSR         ISO_BITS
-            BSR         BWL         ; append .B, .W, or .L
-            * Isolate bits d0-d5 and send them to EA routine
-            RTS                     ; return to I/O
-
-*******************************************************************************
+            BSR         BWL             ; append .B, .W, or .L
+    * Isolate bits d0-d5 and send them to EA routine before return
+            RTS                         ; return to I/O
 
 *********************************** AND ***************************************
-OCR_12
-            MOVE.W      #_AND,(A6)+ ; push address of AND to buffer
-            MOVEQ       #1,D0       ; Iso-task 1: isolate bits d6-d7
+AND_
+            MOVE.W      #_AND,(A6)+     ; push address of AND to buffer
+            MOVEQ       #1,D0           ; Iso-task 1: isolate bits d6-d7
             BSR         ISO_BITS
-            BSR         BWL         ; append .B, .W, or .L
-            * Isolate bits d0-d5 and send them to EA routine
-            RTS                     ; return to I/O
-*******************************************************************************
+            BSR         BWL             ; append .B, .W, or .L
+    * Isolate bits d0-d5 and send them to EA routine before return
+            RTS                         ; return to I/O
 
 ************************************ ADDA *************************************
-OCR_13
+ADDA_
             MOVE.W      #_ADDA,(A6)+    ; push address of ADDA to buffer
             MOVEQ       #4,D0           ; Iso-task 4: isolate bits d8
             BSR         ISO_BITS
             BSR         WL              ; .W or .L, use WL when isolating d8
-            * Isolate bits d0-d5 and send them to EA routine
+    * Isolate bits d0-d5 and send them to EA routine before return
             RTS                         ; return to I/O
-*******************************************************************************
 
-*******************************************************************************
-OCR_14 ; ASd, ROd
-*******************************************************************************
+********************************** ASd, ROd ***********************************
+ASd_ROd
+            MOVEQ       #1,D0               ; Iso-task 1: isolate bits d6-d7
+            BSR         ISO_BITS
+            CMP.B       #3,D2
+            BLT         WHICHONE
+            BRA         DATA
+                                            **Branches**
+WHICHONE
+            MOVEQ       #6,D0               ; Iso-task 6: isolate d3-d4
+            BSR         ISO_BITS
+
+            CMP.B       #0,D2
+            BEQ         ASd_               ; ASd
+            CMP.B       #3,D2
+            BEQ         ROd_               ; ROd
+            BRA         DATA                ; value not recognized
+
+ASd_
+            MOVE.W      #_ASd,(A6)+         ; push address of ASd to buffer
+            MOVEQ       #4,D0               ; Iso-task 4: isolate bits d8
+            BSR         ISO_BITS
+            BSR         LR                  ; add left or right
+            MOVEQ       #1,D0               ; Iso-task 1: isolate bits d6-d7
+            BSR         ISO_BITS
+            BSR         BWL                 ; append .B, .W, or .L           
+    * Isolate bits d0-d5 and send them to EA routine before return
+            RTS                             ; return to I/O
+
+ROd_
+            MOVE.W      #_ROd,(A6)+         ; push address of ROd to buffer
+            MOVEQ       #4,D0               ; Iso-task 4: isolate bits d8
+            BSR         ISO_BITS
+            BSR         LR                  ; add left or right
+            MOVEQ       #1,D0               ; Iso-task 1: isolate bits d6-d7
+            BSR         ISO_BITS
+            BSR         BWL                 ; append .B, .W, or .L           
+    * Isolate bits d0-d5 and send them to EA routine before return
+            RTS                             ; return to I/O
 
 *******************************************************************************
 DATA ; value not recognized
-*******************************************************************************
+            MOVE.W      #_DATA,(A6)+         ; push address of DATA to buffer
+            RTS
 
 ************************** ISOLATE BITS SUBROUTINE ****************************
+
 ISO_BITS    ; Subroutine: Isolates bits based on the task # assigned to D0
             CMP.B       #0,D0       ; Task 0, isolate d0-d5
             BEQ         d0tod5
@@ -727,8 +819,12 @@ ISO_BITS    ; Subroutine: Isolates bits based on the task # assigned to D0
             BEQ         d9tod11
             CMP.B       #3,D0       ; Task 3, isolate d12-d15
             BEQ         d12tod15
-            CMP.B       #4,D0
-            BEQ         d8          ; Task 4, isolate d8
+            CMP.B       #4,D0       ; Task 4, isolate d8
+            BEQ         d8
+            CMP.B       #5,D0       ; Task 5, isolate d8-d11
+            BEQ         d8tod11
+            CMP.B       #6,D0       ; Task 5, isolate d8-d11
+            BEQ         d3tod4
             RTS
 
 d12tod15    ; Isolate bits d12-d15 and assign them to register D2
@@ -737,9 +833,16 @@ d12tod15    ; Isolate bits d12-d15 and assign them to register D2
             ANDI.W      #$F,D2      ; mask to keep only four bits
             RTS
 
+d8tod11     ; Isolate bits d8-d11 and assign them to register D2
+            MOVE.W      D1,D2       ; avoid overwrite of original
+            ROL.W       #8,D2       ; move d8-d11 -> d0-d2
+            ANDI.W      #$0F,D2     ; mask to keep only four bits
+            RTS
+
+
 d9tod11     ; Isolate bits d9-d11 and assign them to register D2
             MOVE.W      D1,D2       ; avoid overwrite of original
-            ROL.W       #7,D2       ; move d8-d11 -> d0-d2
+            ROL.W       #7,D2       ; move d9-d11 -> d0-d2
             ANDI.W      #7,D2       ; mask to keep only three bits
             RTS
 
@@ -755,80 +858,113 @@ d6tod7      ; Isolate bits d6-d7 and assign them to register D2
             ANDI.W      #3,D2       ; mask to keep only two bits
             RTS
 
-d0tod5      ; Isolate bits d0-d5 and assign them to register D4
+d3tod4      ; Isolate bits d0-d5 and assign them to register D2
             MOVE.W      D1,D2       ; avoid overwrite of original
-            ANDI.W      #$3F,D2     ; mask to keep only six bits
+            ROR.W       #3,D2       ; move d3-d4 -> d0-d1
+            ANDI.W      #3,D2       ; mask to keep only two bits
             RTS
-*******************************************************************************
+
+d0tod5      ; Isolate bits d0-d5 and assign them to register D2
+            MOVE.W      D1,D2       ; avoid overwrite of original
+            ANDI.W      #$3F,D2     ; mask to keep only the first six bits
+            RTS
 
 *********************** BYTE, WORD, OR LONG SUBROUTINE ************************
-BWL
+BWL                                     ; standard sizing
             CMP.B       #0,D2
-            BEQ         BYTE 
+            BEQ         BYTE_
             CMP.B       #1,D2
-            BEQ         WORD 
+            BEQ         WORD_
             CMP.B       #2,D2
-            BEQ         LONG
-            RTS                     ; RTS assumes that it didn't branch
+            BEQ         LONG_
+            RTS                         ; RTS assumes that it didn't branch
 
-WL
+WL                                      ; used exclusively with SUBA,CMPA,ADDA
             CMP.B       #0,D2
-            BEQ         WORD 
+            BEQ         WORD_
             CMP.B       #1,D2
-            BEQ         LONG 
-            RTS                     ; RTS assumes that it didn't branch
+            BEQ         LONG_
+            RTS                         ; RTS assumes that it didn't branch
 
-BYTE
-            MOVE.W      #_B,(A6)+  ; push address of .B to buffer
-            RTS                    ; return to OCR_(subroutine that called BWL)
+BLW                                     ; used exclusively with MOVE and MOVEA
+            CMP.B       #1,D2
+            BEQ         BYTE_
+            CMP.B       #2,D2
+            BEQ         LONG_
+            CMP.B       #3,D2
+            BEQ         WORD_
+            RTS                         ; RTS assumes that it didn't branch
 
-WORD
-            MOVE.W      #_W,(A6)+  ; push address of .W to buffer
-            RTS                    ; return to OCR_(subroutine that called BWL)
+BYTE_
+            MOVE.W      #_BYTE,(A6)+    ; push address of .B to buffer
+            RTS                         ; return to subroutine that called BWL
 
-LONG
-            MOVE.W      #_L,(A6)+  ; push address of .L to buffer
-            RTS                    ; return to OCR_(subroutine that called BWL)
-*******************************************************************************
+WORD_
+            MOVE.W      #_WORD,(A6)+    ; push address of .W to buffer
+            RTS                         ; return to subroutine that called BWL
+
+LONG_
+            MOVE.W      #_LONG,(A6)+    ; push address of .L to buffer
+            RTS                         ; return to subroutine that called BWL
+
+*************************** LEFT RIGHT SUBROUTINE *****************************
+LR
+            CMP.B       #0,D2           ; can only be 0 or 1
+            BEQ         RIGHT
+            BRA         LEFT
+
+RIGHT
+            MOVE.W      #_RIGHT,(A6)+   ; push address of 'R' to buffer
+            RTS
+
+LEFT
+            MOVE.W      #_LEFT,(A6)+    ; push address of 'L' to buffer
+            RTS
 
 ********************************* CONSTANTS ***********************************
-_B          DC.L         '.B',0
-_W          DC.L         '.W',0
-_L          DC.L         '.L',0
-_ORI        DC.L         'ORI',0
-_ANDI       DC.L         'ANDI',0
-_SUBI       DC.L         'SUBI',0
-_EORI       DC.L         'EORI',0
-_CMPI       DC.L         'CMPI',0
-_MOVE       DC.L         'MOVE',0
-_MOVEA      DC.L         'MOVEA',0
-_NEG        DC.L         'NEG',0
-_NOP        DC.L         'NOP',0
-_RTS        DC.L         'RTS',0
-_JSR        DC.L         'JSR',0
-_JMP        DC.L         'JMP',0
-_ADDQ       DC.L         'ADDQ',0
-_Bcc        DC.L         'Bcc',0
-_OR         DC.L         'OR',0
-_SUBA       DC.L         'SUBA',0
-_EOR        DC.L         'EOR',0
-_CMP        DC.L         'CMP',0
-_CMPA       DC.L         'CMPA',0
-_AND        DC.L         'AND',0
-_ADDA       DC.L         'ADDA',0
-_ASL        DC.L         'ASL',0
-_ASR        DC.L         'ASR',0
-_ROL        DC.L         'ROL',0
-_ROR        DC.L         'ROR',0
-*******************************************************************************
+_BYTE       DC.B        '.B',CR,LF,0
+_WORD       DC.B        '.W',CR,LF,0
+_LONG       DC.B        '.L',CR,LF,0
+_ORI        DC.B        'ORI',0
+_ANDI       DC.B        'ANDI',0
+_SUBI       DC.B        'SUBI',0
+_ADDI       DC.B        'ADDI',0
+_EORI       DC.B        'EORI',0
+_CMPI       DC.B        'CMPI',0
+_MOVE       DC.B        'MOVE',0
+_MOVEA      DC.B        'MOVEA',0
+_NEG        DC.B        'NEG',0
+_NOP        DC.B        'NOP',CR,LF,0
+_RTS        DC.B        'RTS',CR,LF,0
+_JSR        DC.B        'JSR',CR,LF,0
+_JMP        DC.B        'JMP',CR,LF,0
+_ADDQ       DC.B        'ADDQ',0
+_BCC        DC.B        'BCC',CR,LF,0
+_BCS        DC.B        'BCS',CR,LF,0
+_BEQ        DC.B        'BEQ',CR,LF,0
+_BVC        DC.B        'BVC',CR,LF,0
+_BVS        DC.B        'BVS',CR,LF,0
+_OR         DC.B        'OR',0
+_SUBA       DC.B        'SUBA',0
+_EOR        DC.B        'EOR',0
+_CMP        DC.B        'CMP',0
+_CMPA       DC.B        'CMPA',0
+_AND        DC.B        'AND',0
+_ADDA       DC.B        'ADDA',0
+_ASd        DC.B        'AS',0
+_ROd        DC.B        'RO',0
+_LEFT       DC.B        'L',0
+_RIGHT      DC.B        'R',0
+_DATA       DC.B        'DATA',CR,LF,0
 
-BUFFER      DS.W          80    ; buffer stores addresses of defined constants
+*********************************** OTHER *************************************
+CR          EQU         $0D
+LF          EQU         $0A
+BUFFER      DS.W        200    ; buffer stores addresses of defined constants
 
 *******************************************************************************
 *                            End Op-code Routine
 *******************************************************************************
-
-
 
 *******************************************************************************
 */////////////////////////////////////////////////////////////////////////////*
