@@ -4,13 +4,34 @@
 * Date       : Feb. 22, 2013
 * Description: Disassembler v1.0
 *-----------------------------------------------------------
-
+*******************************************************************************
+*/////////////////////////////////////////////////////////////////////////////*
+*                           Universal Project Notes                           *
+*\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\*
+*******************************************************************************
+* 
+* A4: Address pointer
+* A7: Stack pointer
+* D6: Good/bad flag
+*
 
 *******************************************************************************
 */////////////////////////////////////////////////////////////////////////////*
 *                                  I/O Routine                                *
 *\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\*
 *******************************************************************************
+CONTROL
+            ; io branches here after validating addresses
+            LEA         start_hex,A4    ; load memory pointer to A4
+            MOVE.L      (A4),A4
+            LEA         end_hex,A2      ; load ending address to A2
+            MOVE.L      (A2),D2
+ADDR_LOOP   CMP.L       A4,D2         ; compare mem ptr to end addr
+            BLE         IO_OUTPUT       ; if less then, branch to output
+            BSR         OCR             ; if greater, branch to OCR
+            BRA         ADDR_LOOP       ; loop
+
+
 	ORG	$1000
 START:									;first instruction of program
 
@@ -41,9 +62,9 @@ lwY			EQU		$79					;ASCII value for y for User Prompt
 outCt		EQU		25					;Will show 25 lines on each screen, can adjust
 region		EQU		80					;decimal number 80 to help fill
 
-
 			ORG			start			;Program Start
 			LEA			stack,SP		;Stack pointer in A7
+            
 
 *Displays greeting to user, prompts to begin
 Greeting	MOVE.B		#task0,D0		;Start of Greeting. Loads D0 with text from greeting
@@ -128,7 +149,8 @@ procEnd		MOVE.B		#task1,D0		;D0 holds task1, print wo CR
 			BLE			endErr			;Branch to end error if less than or equal
 			MOVE.L		D7,end_hex		;Set end_hex to shifted address value
 			MOVE.B		#task1,D0		;Get input from user
-			LEA         tempOut,A1      ;Load temporary output to A1
+			BRA         CONTROL         ;start process to ocr
+IO_OUTPUT   LEA         tempOut,A1      ;Load temporary output to A1
 			MOVE.W      tempOutL,D1     ;Load the length of the temp message
 			TRAP        #15             ;Run
 			BRA         Greeting        ;Branch back to Greeting
@@ -221,7 +243,7 @@ prtValid	MOVE.L		#validB,A1			*Store String in A1
 			BRA			prtExit				*Exit Subroutine
 prtExit		MOVEM.L		(SP)+,A0/D0/D1		*Clean Up
 			RTS								
-			
+
 *******************************************************************************
 *send_addr_buf - Sends an Address Register to the Buffer
 *******************************************************************************
@@ -394,7 +416,7 @@ curct		DS.W	    1	            ;current count inside the good buffer
 
 tempOut     DC.B        'This is where the opcodes are processed',CR,LF
 tempOutL    DC.W        41
-			
+
 *******************************************************************************
 *                               End I/O Routine
 *******************************************************************************
@@ -436,7 +458,7 @@ tempOutL    DC.W        41
 * --JSR OCR is a temporary call, remove when I/O actual utilizes subroutine
 
 OCR ; subroutine called by I/O
-            MOVE.L      D3,D1   ; D3 could be any register from I/O      
+            MOVE.W      (A4)+,D1   ; D3 could be any register from I/O      
 
             MOVEQ       #3,D0                   ; Iso-task 3: isolate d12-d15
             BSR         ISO_BITS
@@ -996,7 +1018,7 @@ EAR_decode
 	        JSR	        00(A1,D0)		        ;Now we have the index, back to Index table
 	        MOVEM.L     (SP)+,A1-A3/A5/D0-D2/D4/D5       ;Restore registers from stack
 	        RTS				                    ;Return 
-	        
+
 *Jump Index Table
 *Table holding the different EA Modes, will branch to different Index depending on Offset
 ea_index_table
@@ -1120,7 +1142,7 @@ eaindex101
             LEA	        open_paren,A1	        ;ASCII for Open Paren
 		    MOVE.W	    open_parenLen,D1        ;Get the length
 		    BSR	        send_instr_buf	        ;Add the Paren to the buffer
-		    
+
 		    *Store Address to Buffer
 		    CLR.L	    D0		                ;Empty data register
 		    MOVE	    D2,D0		            ;Store EA bits (6bits)
@@ -1132,14 +1154,14 @@ eaindex101
             LEA	        comma_sign,A1	        ;ASCII for Comma
 		    MOVE.W	    comma_signLen,D1        ;Get the length
 		    BSR	        send_instr_buf	        ;Add the Comma to the buffer
-		    
+
 		    *Get Index Register
 		    MOVE.L      D5,D0                   ;Back up to D0
 		    ANDI        #$F000,D0               ;We only need the first byte, hide the rest
 		    LSR.L       #8,D0                   ;Shift to Right-most postion
 		    LSR.L       #4,D0                   ;Ensure it is in first bit
 		    BSR         send_byte_buf           ;Now store the value at this Register to buffer
-		    
+
 		    *Get the Type
 		    MOVE.L      D5,D0                   ;Back up to D0
 		    ANDI        #$0F00,D0               ;We only need the second byte (size)
@@ -1215,7 +1237,7 @@ easub000
             MOVE.W      #$4,D1                  ;Load the length of the word
             BSR         send_instr_buf          ;Send the Address to Buffer
             
-            MOVEA.L     #00000000,A4            ;Reset contents of A3
+            MOVEA.L     #00000000,A3            ;Reset contents of A3
             RTS                                 ;Return
             
 ************************** Absolute Addressing - Long *************************
@@ -1239,7 +1261,7 @@ easub001
             MOVE.W      #$8,D1                  ;Load the length of the word - LONG
             BSR         send_instr_buf          ;Send the Address to Buffer
             
-            MOVEA.L     #00000000,A4            ;Reset contents of A3
+            MOVEA.L     #00000000,A3            ;Reset contents of A3
             RTS                                 ;Return
             
 ******************* Program Counter Indirect w/ Displacement ******************
@@ -1309,7 +1331,7 @@ easub100_l
             MOVE.W      #$8,D1                  ;Load the length of the word - LONG
             BSR         send_instr_buf          ;Send the Address to Buffer
             
-            MOVEA.L     #00000000,A4            ;Reset contents of A3
+            MOVEA.L     #00000000,A3            ;Reset contents of A3
             RTS                                 ;Return           
             
 easub100_badLen
@@ -2177,6 +2199,7 @@ overflow_set
 *~Font size~10~
 *~Tab type~1~
 *~Tab size~4~
+
 *~Font name~Courier New~
 *~Font size~10~
 *~Tab type~1~
