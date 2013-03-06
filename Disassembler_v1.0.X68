@@ -10,8 +10,9 @@
 *\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\*
 *******************************************************************************
 * 
-* A4: Address pointer
-* A7: Stack pointer
+* A4: Address pointer for disassemble
+* A6: used by op-code and EA routine for buffer pointer
+* A7: Stack pointer for saving and maintaining registers
 * D6: Good/bad flag
 *
 *******************************************************************************
@@ -465,8 +466,11 @@ tempOutL    DC.W        41
 * --JSR OCR is a temporary call, remove when I/O actual utilizes subroutine
 
 OCR ; subroutine called by I/O
-            LEA         validB,A6    ; load good buffer to A6
-            MOVE.W      (A4)+,D1     ; D3 could be any register from I/O      
+            MOVEM.L     A0-A3/A5-A6/D0-D7,-(SP)
+            LEA         validB,A6  ; load good buffer to A6
+            MOVE.W      (A4)+,D1   ; A4, universal ptr to next op-code mem addr
+                                   ; D1 holds original op-code word until
+                                   ; routine is finished
 
             MOVEQ       #3,D0                   ; Iso-task 3: isolate d12-d15
             BSR         ISO_BITS
@@ -494,6 +498,10 @@ OCR ; subroutine called by I/O
             CMP.B       #14,D2
             BEQ         ASd_ROd                 ; ASd, ROd
             BRA         DATA                    ; value not recognized
+END_OCR
+            ; end of routine, reload registers
+            MOVEM.L     (SP)+,A0-A3/A5-A6/D0-D7
+            RTS                                 ; return to I/O
 
 ************************ ORI, ANDI, SUBI, EORI, CMPI **************************
 ORI_ANDI_SUBI_ADDI_EORI_CMPI
@@ -516,12 +524,13 @@ ORI_ANDI_SUBI_ADDI_EORI_CMPI
 
 ************************************* ORI *************************************
 ORI_
-            MOVE.W      #_ORI,(A6)+         ; push address of ORI to buffer
-            MOVEQ       #1,D0               ; Iso-task 1: isolate bits d6-d7
+            MOVE.W      #_ORI,(A6)+     ; push address of ORI to buffer
+            MOVEQ       #1,D0           ; Iso-task 1: isolate bits d6-d7
             BSR         ISO_BITS
-            BSR         BWL                 ; append .B, .W, or .L
+            BSR         BWL             ; append .B, .W, or .L
     * Isolate bits d0-d5 and send them to EA routine before return
-            RTS                             ; return to I/O
+            BSR         ISO_D0_TO_D5_FOR_EA
+            BRA         END_OCR
 
 ************************************ ANDI *************************************
 ANDI_
@@ -530,7 +539,7 @@ ANDI_
             BSR         ISO_BITS
             BSR         BWL                 ; append .B, .W, or .L
     * Isolate bits d0-d5 and send them to EA routine before return
-            RTS                             ; return to I/O
+            BRA         END_OCR
 
 ************************************ SUBI *************************************
 SUBI_
@@ -539,7 +548,7 @@ SUBI_
             BSR         ISO_BITS
             BSR         BWL                 ; append .B, .W, or .L
     * Isolate bits d0-d5 and send them to EA routine before return
-            RTS                             ; return to I/O
+            BRA         END_OCR
 
 ************************************ ADDI *************************************
 ADDI_
@@ -548,7 +557,7 @@ ADDI_
             BSR         ISO_BITS
             BSR         BWL                 ; append .B, .W, or .L
     * Isolate bits d0-d5 and send them to EA routine before return
-            RTS                             ; return to I/O
+            BRA         END_OCR
 
 ************************************ EORI *************************************
 EORI_
@@ -557,8 +566,8 @@ EORI_
             BSR         ISO_BITS
             BSR         BWL                 ; append .B, .W, or .L
     * Isolate bits d0-d5 and send them to EA routine before return
-            RTS                             ; return to I/O
-            
+            BRA         END_OCR            
+
 ************************************ CMPI *************************************
 CMPI_
             MOVE.W      #_CMPI,(A6)+        ; push address of CMPI to buffer
@@ -566,7 +575,7 @@ CMPI_
             BSR         ISO_BITS
             BSR         BWL                 ; append .B, .W, or .L
     * Isolate bits d0-d5 and send them to EA routine before return
-            RTS                             ; return to I/O
+            BRA         END_OCR
 
 ******************************** MOVE, MOVEA **********************************
 MOVE_MOVEA
@@ -582,8 +591,8 @@ MOVEA_
             MOVEQ       #3,D0               ; Iso-task 3: isolate d12-d15
             BSR         ISO_BITS
             BSR         BLW                 ; append .B, .W, or .L
-    * Isolate bits d0-d5 and send them to EA routine before return
-            RTS                             ; return to I/O        
+    * Isolate bits d0-d5 and d9-d11, and send them to EA routine before return
+            BRA         END_OCR
 
 ************************************ MOVE *************************************
 MOVE_
@@ -591,8 +600,8 @@ MOVE_
             MOVEQ       #3,D0               ; Iso-task 3: isolate d12-d15
             BSR         ISO_BITS
             BSR         BLW                 ; append .B, .W, or .L
-    * Isolate bits d0-d5 and send them to EA routine before return
-            RTS                             ; return to I/O        
+    * Isolate bits d0-d5 and d9-d11, and send them to EA routine before return
+            BRA         END_OCR
 
 ************************** NEG, NOP, RTS, JSR, JMP ****************************
 NEG_NOP_RTS_JSR_JMP
@@ -612,7 +621,7 @@ NEG_
             BSR         ISO_BITS
             BSR         BWL                 ; append .B, .W, or .L
     * Isolate bits d0-d5 and send them to EA routine before return
-            RTS                             ; return to I/O
+            BRA         END_OCR
 
 ***************************** NOP, RTS, JSR, JMP ******************************
 NOP_RTS_JSR_JMP
@@ -641,25 +650,25 @@ NOP_RTS
 NOP_
             MOVE.W      #_NOP,(A6)+         ; push address of NOP to buffer
     * Isolate bits d0-d5 and send them to EA routine before return
-            RTS                             ; return to I/O
+            BRA         END_OCR
 
 ************************************ RTS **************************************
 RTS_
             MOVE.W      #_RTS,(A6)+         ; push address of RTS to buffer
     * Isolate bits d0-d5 and send them to EA routine before return
-            RTS                             ; return to I/O
+            BRA         END_OCR
 
 ************************************ JSR **************************************
 JSR_
             MOVE.W      #_JSR,(A6)+         ; push address of JSR to buffer
     * Isolate bits d0-d5 and send them to EA routine before return
-            RTS                             ; return to I/O
+            BRA         END_OCR
 
 ************************************ JMP **************************************
 JMP_
             MOVE.W      #_JMP,(A6)+         ; push address of JMP to buffer
     * Isolate bits d0-d5 and send them to EA routine before return
-            RTS                             ; return to I/O
+            BRA         END_OCR
 
 ************************************ ADDQ *************************************
 ADDQ_
@@ -668,7 +677,7 @@ ADDQ_
             BSR         ISO_BITS
             BSR         BWL                 ; append .B, .W, or .L
     * Isolate bits d0-d5 and send them to EA routine before return
-            RTS                             ; return to I/O
+            BRA         END_OCR
 
 ************************************ Bcc **************************************
 B_
@@ -690,28 +699,28 @@ B_
 BCC_
             MOVE.W      #_BCC,(A6)+         ; push address of BCC to buffer
     * Isolate bits d0-d5 and send them to EA routine before return
-            RTS                             ; return to I/O
-
+    * need to calculate displacement
+            BRA         END_OCR
 BCS_
             MOVE.W      #_BCS,(A6)+         ; push address of BCS to buffer
     * Isolate bits d0-d5 and send them to EA routine before return
-            RTS                             ; return to I/O
-
+    * need to calculate displacement
+            BRA         END_OCR
 BEQ_
             MOVE.W      #_BEQ,(A6)+         ; push address of BEQ to buffer
     * Isolate bits d0-d5 and send them to EA routine before return
-            RTS                             ; return to I/O
-
+    * need to calculate displacement
+            BRA         END_OCR
 BVC_
             MOVE.W      #_BVC,(A6)+         ; push address of BVC to buffer
     * Isolate bits d0-d5 and send them to EA routine before return
-            RTS                             ; return to I/O
-
+    * need to calculate displacement
+            BRA         END_OCR
 BVS_
             MOVE.W      #_BVS,(A6)+         ; push address of BVS to buffer
     * Isolate bits d0-d5 and send them to EA routine before return
-            RTS                             ; return to I/O
-
+    * need to calculate displacement
+            BRA         END_OCR
 ************************************* OR **************************************
 OR_
             MOVE.W      #_OR,(A6)+          ; push address of OR to buffer
@@ -719,8 +728,7 @@ OR_
             BSR         ISO_BITS
             BSR         BWL                 ; append .B, .W, or .L
     * Isolate bits d0-d5 and send them to EA routine before return
-            RTS                             ; return to I/O
-
+            BRA         END_OCR
 ************************************ SUBA *************************************
 SUBA_
             MOVE.W      #_SUBA,(A6)+    ; push address of SUBA to buffer
@@ -728,8 +736,7 @@ SUBA_
             BSR         ISO_BITS
             BSR         WL              ; .W or .L, use WL when isolating d8
     * Isolate bits d0-d5 and send them to EA routine before return
-            RTS                         ; return to I/O
-
+            BRA         END_OCR
 ******************************* EOR, CMP, CMPA ********************************
 EOR_CMP_CMPA
             MOVEQ       #1,D0           ; Iso-task 1: isolate bits d6-d7
@@ -746,8 +753,7 @@ CMPA_
             BSR         ISO_BITS
             BSR         WL              ; .W or .L, use WL when isolating d8
     * Isolate bits d0-d5 and send them to EA routine before return
-            RTS                         ; return to I/O
-
+            BRA         END_OCR
 ********************************** EOR, CMP ***********************************
 EOR_CMP
             MOVEQ       #4,D0           ; Iso-task 4: isolate bits d8
@@ -764,8 +770,7 @@ CMP_
             BSR         ISO_BITS
             BSR         BWL             ; append .B, .W, or .L
     * Isolate bits d0-d5 and send them to EA routine before return
-            RTS                         ; return to I/O
-
+            BRA         END_OCR
 ************************************ EOR **************************************
 EOR_
             MOVE.W      #_EOR,(A6)+     ; push address of EOR to buffer
@@ -773,8 +778,7 @@ EOR_
             BSR         ISO_BITS
             BSR         BWL             ; append .B, .W, or .L
     * Isolate bits d0-d5 and send them to EA routine before return
-            RTS                         ; return to I/O
-
+            BRA         END_OCR
 *********************************** AND ***************************************
 AND_
             MOVE.W      #_AND,(A6)+     ; push address of AND to buffer
@@ -782,8 +786,7 @@ AND_
             BSR         ISO_BITS
             BSR         BWL             ; append .B, .W, or .L
     * Isolate bits d0-d5 and send them to EA routine before return
-            RTS                         ; return to I/O
-
+            BRA         END_OCR
 ************************************ ADDA *************************************
 ADDA_
             MOVE.W      #_ADDA,(A6)+    ; push address of ADDA to buffer
@@ -791,8 +794,7 @@ ADDA_
             BSR         ISO_BITS
             BSR         WL              ; .W or .L, use WL when isolating d8
     * Isolate bits d0-d5 and send them to EA routine before return
-            RTS                         ; return to I/O
-
+            BRA         END_OCR
 ********************************** ASd, ROd ***********************************
 ASd_ROd
             MOVEQ       #1,D0               ; Iso-task 1: isolate bits d6-d7
@@ -820,8 +822,7 @@ ASd_
             BSR         ISO_BITS
             BSR         BWL                 ; append .B, .W, or .L           
     * Isolate bits d0-d5 and send them to EA routine before return
-            RTS                             ; return to I/O
-
+            BRA         END_OCR
 ROd_
             MOVE.W      #_ROd,(A6)+         ; push address of ROd to buffer
             MOVEQ       #4,D0               ; Iso-task 4: isolate bits d8
@@ -831,8 +832,7 @@ ROd_
             BSR         ISO_BITS
             BSR         BWL                 ; append .B, .W, or .L           
     * Isolate bits d0-d5 and send them to EA routine before return
-            RTS                             ; return to I/O
-
+            BRA         END_OCR
 *******************************************************************************
 DATA ; value not recognized
             MOVE.W      #_DATA,(A6)+         ; push address of DATA to buffer
@@ -853,8 +853,15 @@ ISO_BITS    ; Subroutine: Isolates bits based on the task # assigned to D0
             BEQ         d8
             CMP.B       #5,D0       ; Task 5, isolate d8-d11
             BEQ         d8tod11
-            CMP.B       #6,D0       ; Task 5, isolate d8-d11
+            CMP.B       #6,D0       ; Task 6, isolate d3-d4
             BEQ         d3tod4
+            RTS
+
+ISO_D0_TO_D5_FOR_EA
+            MOVEQ       #0,D0           ; Iso-task 0: isolate bits d0-d5
+            BSR         ISO_BITS
+            MOVE.W      D2,D0           ; load isolated bits to D0, used by EA
+            BSR         EAR_decode      ; call EA subroutine
             RTS
 
 d12tod15    ; Isolate bits d12-d15 and assign them to register D2
