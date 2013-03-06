@@ -115,7 +115,8 @@ procStart   JSR         clr_regs        ;Clear out data from Registers
 			BRA			procEnd			;Branch to procEnd for End Addr validation
 
 *Prompts and processes Ending Address
-procEnd		MOVE.B		#task1,D0		;D0 holds task1, print wo CR
+procEnd		MOVE.B      #0,D6           ;Clear Bad Flag
+            MOVE.B		#task1,D0		;D0 holds task1, print wo CR
 			LEA			endAdd,A1		;A1 holds string asking for ending address
 			MOVE.W		endAddL,D1		;D1 holds length of ending string
 			TRAP		#15				
@@ -150,27 +151,49 @@ procEnd		MOVE.B		#task1,D0		;D0 holds task1, print wo CR
 CONTROL
             ; io branches here after validating addresses
             LEA         start_hex,A4    ; load addr of ptr to addr reg A4
-            LEA         end_hex,A2      ; load ending address to A2
+            LEA         end_hex,A5      ; load ending address to A5
             MOVE.L      (A4),A4         ; move start address to ptr
-            MOVE.L      (A2),D2         ; move end addr to reg
-ADDR_LOOP
-            CMP.L       A4,D2           ; compare mem ptr to end addr
-            BLT         IO_OUTPUT       ; Move to print buffer
-            BSR         OCR             ; Process next OP-Code
-            BRA         ADDR_LOOP       ; Continue processing Address Range
-
-IO_OUTPUT   LEA         validB,A2       ;Load buffer start addr into A1
-            LEA         validB_end,A3   ;Load buffer ending addr into A3
-            MOVE.L      #validB_end,D0  ;Copy end to D0
-            MOVE.L      A2,A1
-   			TRAP        #13             ;Write to display        
-            
-EXIT_IO     BRA         Greeting
+            MOVE.L      (A5),D2         ; move end addr to reg
+            MOVE.B		#task0,D0		;D0 holds task2, print w CR
+			LEA			col_template,A1	;A1 holds error string
+			MOVE.W		c_temp_len,D1   ;D1 holds length of start error string
+			TRAP		#15				;Run
+			BRA         ADDR_LOOP
+ADDR_LOOP   MOVE.L      #1,D0
+            BSR         clrBuf          ; clear the buffer
+            MOVE.L      (A5),D2         ; Set Ending Address
+            CMP.L       (A4)+,D2        ; compare mem ptr to end addr
+            BLT         EXIT_IO         ; Move to print buffer
+            BSR         OCR            ; Process next OP-Code
+            BSR         prtBuf          ; Print value in buffer
+            BRA         ADDR_LOOP       ; Continue processing Address Range            
+EXIT_IO     
+            BRA         Greeting
 
 
 *******************************************************************************
 *                            I/O Subroutines
 *******************************************************************************
+*******************************************************************************
+*printBuf - Prints value in buffer to Console
+*******************************************************************************
+prtBuf      MOVE.B      #task0,D0
+            LEA         validB,A0       ;Get Buffer Start
+            MOVE.B      #80,D1
+
+            TRAP        #15
+            RTS							*return to subroutine
+*******************************************************************************
+*clrBuf - Fills buffer with blanks
+*******************************************************************************
+clrBuf      LEA         validB,A0       ;Get Buffer Start
+            LEA         validB_end,A1   ;Get End of buffer
+clrLoop     CMPA.L      A0,A1           ;Check if we're at end address of buffer
+            BLT         exitBuf         ;End of buffer
+            MOVE.L      #space,(A0)+    ;Write space to buffer
+            BRA         clrLoop
+exitBuf		RTS							*return to subroutine
+
 *******************************************************************************
 *clear_regs - Clears Out Data/Addresss Registers
 *******************************************************************************
@@ -391,7 +414,7 @@ start_hex           DS.L        1               ;Starting Value in Hex
 end_hex             DS.L        1               ;Ending Value in Hex    
 dataSt              DS.B        20              ;Continue Conditional Response
 col_template        DC.B        CR,LF,CR,LF,'MEMORY LOCATION    OP-CODE     OPERAND',CR,LF
-c_template_len      DC.W        42              ;Length of Column Template
+c_temp_len      DC.W        42              ;Length of Column Template
 
 validB              DS.B        80              ;80 Bytes for valid buffer
 validB_end                                      ;Used for address index
@@ -486,7 +509,7 @@ tempOutL    DC.W        41
 
 OCR ; subroutine called by I/O
             MOVEM.L     A0-A3/A5-A6/D0-D7,-(SP)
-            LEA         validB,A6  ; load good buffer to A6
+            LEA         validB,A6  ; load pointer to good buffer into A6
             MOVE.W      (A4)+,D1   ; A4, universal ptr to next op-code mem addr
                                    ; D1 holds original op-code word until
                                    ; routine is finished
@@ -907,7 +930,7 @@ ISO_D0_TO_D5_FOR_EA     ; send source <ea> bits to EAR
             MOVEM.L     D0/D1,-(SP)     ; save reg state before subroutine
             MOVE.B      D2,D0           ; load isolated bits to D0, used by EA
             MOVE.L      #0,D1
-            BSR         EAR_decode      ; call EA subroutine
+            ;BSR         EAR_decode      ; call EA subroutine
             MOVEM.L     (SP)+,D0/D1     ; restore reg state after subroutine
             RTS                         ; return to op-code branch
 
@@ -917,7 +940,7 @@ ISO_D6_TO_D11_FOR_EA    ; send dest <ea> bits to EAR
             MOVEM.L     D0/D1,-(SP)     ; save reg state before subroutine
             MOVE.W      D2,D0           ; load isolated bits to D0, used by EA
             MOVE.L      #1,D1
-            BSR         EAR_decode      ; call EA subroutine
+            ;BSR         EAR_decode      ; call EA subroutine
             MOVEM.L     (SP)+,D0/D1     ; restore reg state after subroutine
             RTS                         ; return to op-code branch
 
@@ -2281,6 +2304,10 @@ overflow_set
 *~Font size~10~
 *~Tab type~1~
 *~Tab size~4~
+
+
+
+
 *~Font name~Courier New~
 *~Font size~10~
 *~Tab type~1~
