@@ -14,28 +14,22 @@
 * A7: Stack pointer
 * D6: Good/bad flag
 *
+*******************************************************************************
+*/////////////////////////////////////////////////////////////////////////////*
+*                                 MAIN PROGRAM                                *
+*\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\*
+*******************************************************************************
 
+            ORG	    $1000
+START:									;first instruction of program
+
+			OPT		CRE					;Bring in the Symbol Table
 *******************************************************************************
 */////////////////////////////////////////////////////////////////////////////*
 *                                  I/O Routine                                *
 *\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\*
 *******************************************************************************
-CONTROL
-            ; io branches here after validating addresses
-            LEA         start_hex,A4    ; load memory pointer to A4
-            MOVE.L      (A4),A4
-            LEA         end_hex,A2      ; load ending address to A2
-            MOVE.L      (A2),D2
-ADDR_LOOP   CMP.L       A4,D2         ; compare mem ptr to end addr
-            BLE         IO_OUTPUT       ; if less then, branch to output
-            BSR         OCR             ; if greater, branch to OCR
-            BRA         ADDR_LOOP       ; loop
 
-
-	ORG	$1000
-START:									;first instruction of program
-
-			OPT		CRE					;Bring in the Symbol Table
 strtAddr	EQU		$00002000			;Starting Address for user input program
 endAddr		EQU		$000FFFFF			;Ending Address - upper bound of input program
 badStart	EQU		$000FFFFE			;Invalid starting Address if GTE 000FFFFE
@@ -154,6 +148,19 @@ IO_OUTPUT   LEA         tempOut,A1      ;Load temporary output to A1
 			MOVE.W      tempOutL,D1     ;Load the length of the temp message
 			TRAP        #15             ;Run
 			BRA         Greeting        ;Branch back to Greeting
+
+CONTROL
+            ; io branches here after validating addresses
+            LEA         start_hex,A4    ; load addr of ptr to addr reg A4
+            LEA         end_hex,A2      ; load ending address to A2
+            MOVE.L      (A4),A4         ; move start address to ptr
+            MOVE.L      (A2),D2         ; move end addr to reg
+ADDR_LOOP
+            CMP.L       A4,D2           ; compare mem ptr to end addr
+            BLE         IO_OUTPUT       ; if less then, branch to output
+            BSR         OCR             ; if greater, branch to OCR
+            BRA         ADDR_LOOP       ; loop
+
 
 *******************************************************************************
 *                            I/O Subroutines
@@ -458,7 +465,8 @@ tempOutL    DC.W        41
 * --JSR OCR is a temporary call, remove when I/O actual utilizes subroutine
 
 OCR ; subroutine called by I/O
-            MOVE.W      (A4)+,D1   ; D3 could be any register from I/O      
+            LEA         validB,A6    ; load good buffer to A6
+            MOVE.W      (A4)+,D1     ; D3 could be any register from I/O      
 
             MOVEQ       #3,D0                   ; Iso-task 3: isolate d12-d15
             BSR         ISO_BITS
