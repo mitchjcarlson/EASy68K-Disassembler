@@ -159,7 +159,7 @@ ORI_
             BSR         ISO_BITS
             BSR         BWL             ; append .B, .W, or .L
     * Isolate bits d0-d5 and send them to EA routine before return
-            BSR         ISO_D0_TO_D5_FOR_EA
+            BSR         ISO_D0_TO_D5_FOR_EA     ; send source <ea> bits to EAR
             BRA         END_OCR
 
 ************************************ ANDI *************************************
@@ -169,7 +169,7 @@ ANDI_
             BSR         ISO_BITS
             BSR         BWL                 ; append .B, .W, or .L
     * Isolate bits d0-d5 and send them to EA routine before return
-            BSR         ISO_D0_TO_D5_FOR_EA
+            BSR         ISO_D0_TO_D5_FOR_EA     ; send source <ea> bits to EAR
             BRA         END_OCR
 
 ************************************ SUBI *************************************
@@ -179,7 +179,7 @@ SUBI_
             BSR         ISO_BITS
             BSR         BWL                 ; append .B, .W, or .L
     * Isolate bits d0-d5 and send them to EA routine before return
-            BSR         ISO_D0_TO_D5_FOR_EA
+            BSR         ISO_D0_TO_D5_FOR_EA     ; send source <ea> bits to EAR
             BRA         END_OCR
 
 ************************************ ADDI *************************************
@@ -189,7 +189,7 @@ ADDI_
             BSR         ISO_BITS
             BSR         BWL                 ; append .B, .W, or .L
     * Isolate bits d0-d5 and send them to EA routine before return
-            BSR         ISO_D0_TO_D5_FOR_EA
+            BSR         ISO_D0_TO_D5_FOR_EA     ; send source <ea> bits to EAR
             BRA         END_OCR
 
 ************************************ EORI *************************************
@@ -199,7 +199,7 @@ EORI_
             BSR         ISO_BITS
             BSR         BWL                 ; append .B, .W, or .L
     * Isolate bits d0-d5 and send them to EA routine before return
-            BSR         ISO_D0_TO_D5_FOR_EA
+            BSR         ISO_D0_TO_D5_FOR_EA     ; send source <ea> bits to EAR
             BRA         END_OCR            
 
 ************************************ CMPI *************************************
@@ -209,7 +209,7 @@ CMPI_
             BSR         ISO_BITS
             BSR         BWL                 ; append .B, .W, or .L
     * Isolate bits d0-d5 and send them to EA routine before return
-            BSR         ISO_D0_TO_D5_FOR_EA
+            BSR         ISO_D0_TO_D5_FOR_EA     ; send source <ea> bits to EAR
             BRA         END_OCR
 
 ******************************** MOVE, MOVEA **********************************
@@ -226,9 +226,9 @@ MOVEA_
             MOVEQ       #3,D0               ; Iso-task 3: isolate d12-d15
             BSR         ISO_BITS
             BSR         BLW                 ; append .B, .W, or .L
-    * Isolate bits d0-d5 and d9-d11, and send them to EA routine before return
-            BSR         ISO_D0_TO_D5_FOR_EA
-            BSR         ISO_D6_TO_D11_FOR_EA
+    * Isolate bits d0-d5 and d6-d11, and send them to EA routine before return
+            BSR         ISO_D0_TO_D5_FOR_EA     ; send source <ea> bits to EAR
+            BSR         ISO_D6_TO_D11_FOR_EA    ; send dest <ea> bits to EAR
             BRA         END_OCR
 
 ************************************ MOVE *************************************
@@ -237,9 +237,9 @@ MOVE_
             MOVEQ       #3,D0               ; Iso-task 3: isolate d12-d15
             BSR         ISO_BITS
             BSR         BLW                 ; append .B, .W, or .L
-    * Isolate bits d0-d5 and d9-d11, and send them to EA routine before return
-            BSR         ISO_D0_TO_D5_FOR_EA
-            BSR         ISO_D6_TO_D11_FOR_EA
+    * Isolate bits d0-d5 and d6-d11, and send them to EA routine before return
+            BSR         ISO_D0_TO_D5_FOR_EA     ; send source <ea> bits to EAR
+            BSR         ISO_D6_TO_D11_FOR_EA    ; send dest <ea> bits to EAR
             BRA         END_OCR
 
 ************************** NEG, NOP, RTS, JSR, JMP ****************************
@@ -260,7 +260,7 @@ NEG_
             BSR         ISO_BITS
             BSR         BWL                 ; append .B, .W, or .L
     * Isolate bits d0-d5 and send them to EA routine before return
-            BSR         ISO_D0_TO_D5_FOR_EA
+            BSR         ISO_D0_TO_D5_FOR_EA     ; send source <ea> bits to EAR
             BRA         END_OCR
 
 ***************************** NOP, RTS, JSR, JMP ******************************
@@ -300,14 +300,14 @@ RTS_
 JSR_
             MOVE.W      #_JSR,(A6)+         ; push address of JSR to buffer
     * Isolate bits d0-d5 and send them to EA routine before return
-            BSR         ISO_D0_TO_D5_FOR_EA
+            BSR         ISO_D0_TO_D5_FOR_EA     ; send source <ea> bits to EAR
             BRA         END_OCR
 
 ************************************ JMP **************************************
 JMP_
             MOVE.W      #_JMP,(A6)+         ; push address of JMP to buffer
     * Isolate bits d0-d5 and send them to EA routine before return
-            BSR         ISO_D0_TO_D5_FOR_EA
+            BSR         ISO_D0_TO_D5_FOR_EA     ; send source <ea> bits to EAR
             BRA         END_OCR
 
 ************************************ ADDQ *************************************
@@ -317,7 +317,7 @@ ADDQ_
             BSR         ISO_BITS
             BSR         BWL                 ; append .B, .W, or .L
     * Isolate bits d0-d5 and send them to EA routine before return
-            BSR         ISO_D0_TO_D5_FOR_EA
+            BSR         ISO_D0_TO_D5_FOR_EA     ; send source <ea> bits to EAR
             BRA         END_OCR
 
 ************************************ Bcc **************************************
@@ -363,9 +363,9 @@ OR_
             MOVEQ       #1,D0               ; Iso-task 1: isolate bits d6-d7
             BSR         ISO_BITS
             BSR         BWL                 ; append .B, .W, or .L
-    * Isolate bits d0-d5 and d9-d11, and send them to EA routine before return
-            BSR         ISO_D0_TO_D5_FOR_EA
-            BSR         ISO_D6_TO_D11_FOR_EA
+    * Isolate bits d0-d5 and d6-d11, and send them to EA routine before return
+            BSR         ISO_D0_TO_D5_FOR_EA     ; send source <ea> bits to EAR
+            BSR         ISO_D6_TO_D11_FOR_EA    ; send dest <ea> bits to EAR
             BRA         END_OCR
 ************************************ SUBA *************************************
 SUBA_
@@ -373,9 +373,9 @@ SUBA_
             MOVEQ       #4,D0           ; Iso-task 4: isolate bits d8
             BSR         ISO_BITS
             BSR         WL              ; .W or .L, use WL when isolating d8
-    * Isolate bits d0-d5 and d9-d11, and send them to EA routine before return
-            BSR         ISO_D0_TO_D5_FOR_EA
-            BSR         ISO_D6_TO_D11_FOR_EA
+    * Isolate bits d0-d5 and d6-d11, and send them to EA routine before return
+            BSR         ISO_D0_TO_D5_FOR_EA     ; send source <ea> bits to EAR
+            BSR         ISO_D6_TO_D11_FOR_EA    ; send dest <ea> bits to EAR
             BRA         END_OCR
 ******************************* EOR, CMP, CMPA ********************************
 EOR_CMP_CMPA
@@ -392,9 +392,9 @@ CMPA_
             MOVEQ       #4,D0           ; Iso-task 4: isolate bits d8
             BSR         ISO_BITS
             BSR         WL              ; .W or .L, use WL when isolating d8
-    * Isolate bits d0-d5 and d9-d11, and send them to EA routine before return
-            BSR         ISO_D0_TO_D5_FOR_EA
-            BSR         ISO_D6_TO_D11_FOR_EA
+    * Isolate bits d0-d5 and d6-d11, and send them to EA routine before return
+            BSR         ISO_D0_TO_D5_FOR_EA     ; send source <ea> bits to EAR
+            BSR         ISO_D6_TO_D11_FOR_EA    ; send dest <ea> bits to EAR
             BRA         END_OCR
 ********************************** EOR, CMP ***********************************
 EOR_CMP
@@ -411,9 +411,9 @@ CMP_
             MOVEQ       #1,D0           ; Iso-task 1: isolate bits d6-d7
             BSR         ISO_BITS
             BSR         BWL             ; append .B, .W, or .L
-    * Isolate bits d0-d5 and d9-d11, and send them to EA routine before return
-            BSR         ISO_D0_TO_D5_FOR_EA
-            BSR         ISO_D6_TO_D11_FOR_EA
+    * Isolate bits d0-d5 and d6-d11, and send them to EA routine before return
+            BSR         ISO_D0_TO_D5_FOR_EA     ; send source <ea> bits to EAR
+            BSR         ISO_D6_TO_D11_FOR_EA    ; send dest <ea> bits to EAR
             BRA         END_OCR
 ************************************ EOR **************************************
 EOR_
@@ -421,9 +421,9 @@ EOR_
             MOVEQ       #1,D0           ; Iso-task 1: isolate bits d6-d7
             BSR         ISO_BITS
             BSR         BWL             ; append .B, .W, or .L
-    * Isolate bits d0-d5 and d9-d11, and send them to EA routine before return
-            BSR         ISO_D0_TO_D5_FOR_EA
-            BSR         ISO_D6_TO_D11_FOR_EA
+    * Isolate bits d0-d5 and d6-d11, and send them to EA routine before return
+            BSR         ISO_D0_TO_D5_FOR_EA     ; send source <ea> bits to EAR
+            BSR         ISO_D6_TO_D11_FOR_EA    ; send dest <ea> bits to EAR
             BRA         END_OCR
 *********************************** AND ***************************************
 AND_
@@ -431,9 +431,9 @@ AND_
             MOVEQ       #1,D0           ; Iso-task 1: isolate bits d6-d7
             BSR         ISO_BITS
             BSR         BWL             ; append .B, .W, or .L
-    * Isolate bits d0-d5 and d9-d11, and send them to EA routine before return
-            BSR         ISO_D0_TO_D5_FOR_EA
-            BSR         ISO_D6_TO_D11_FOR_EA
+    * Isolate bits d0-d5 and d6-d11, and send them to EA routine before return
+            BSR         ISO_D0_TO_D5_FOR_EA     ; send source <ea> bits to EAR
+            BSR         ISO_D6_TO_D11_FOR_EA    ; send dest <ea> bits to EAR
             BRA         END_OCR
 ************************************ ADDA *************************************
 ADDA_
@@ -441,9 +441,9 @@ ADDA_
             MOVEQ       #4,D0           ; Iso-task 4: isolate bits d8
             BSR         ISO_BITS
             BSR         WL              ; .W or .L, use WL when isolating d8
-    * Isolate bits d0-d5 and d9-d11, and send them to EA routine before return
-            BSR         ISO_D0_TO_D5_FOR_EA
-            BSR         ISO_D6_TO_D11_FOR_EA
+    * Isolate bits d0-d5 and d6-d11, and send them to EA routine before return
+            BSR         ISO_D0_TO_D5_FOR_EA     ; send source <ea> bits to EAR
+            BSR         ISO_D6_TO_D11_FOR_EA    ; send dest <ea> bits to EAR
             BRA         END_OCR
 ********************************** ASd, ROd ***********************************
 ASd_ROd
@@ -472,7 +472,7 @@ ASd_
             BSR         ISO_BITS
             BSR         BWL                 ; append .B, .W, or .L           
     * Isolate bits d0-d5 and send them to EA routine before return
-            BSR         ISO_D0_TO_D5_FOR_EA
+            BSR         ISO_D0_TO_D5_FOR_EA     ; send source <ea> bits to EAR
             BRA         END_OCR
 ROd_
             MOVE.W      #_ROd,(A6)+         ; push address of ROd to buffer
@@ -483,7 +483,7 @@ ROd_
             BSR         ISO_BITS
             BSR         BWL                 ; append .B, .W, or .L           
     * Isolate bits d0-d5 and send them to EA routine before return
-            BSR         ISO_D0_TO_D5_FOR_EA
+            BSR         ISO_D0_TO_D5_FOR_EA     ; send source <ea> bits to EAR
             BRA         END_OCR
 *******************************************************************************
 DATA ; value not recognized
@@ -511,7 +511,7 @@ ISO_BITS    ; Subroutine: Isolates bits based on the task # assigned to D0
             BEQ         d6tod11
             RTS                     ; return to op-code branch
 
-ISO_D0_TO_D5_FOR_EA
+ISO_D0_TO_D5_FOR_EA     ; send source <ea> bits to EAR
             MOVEQ       #0,D0           ; Iso-task 0: isolate bits d0-d5
             BSR         ISO_BITS
             MOVEM.L     D0/D1,-(SP)     ; save reg state before subroutine
@@ -521,7 +521,7 @@ ISO_D0_TO_D5_FOR_EA
             MOVEM.L     (SP)+,D0/D1     ; restore reg state after subroutine
             RTS                         ; return to op-code branch
 
-ISO_D6_TO_D11_FOR_EA
+ISO_D6_TO_D11_FOR_EA    ; send dest <ea> bits to EAR
             MOVEQ       #7,D0           ; Iso-task 7: isolate bits d6-d11
             BSR         ISO_BITS
             MOVEM.L     D0/D1,-(SP)     ; save reg state before subroutine
@@ -674,7 +674,6 @@ LF          EQU         $0A
 *******************************************************************************
 *                            End Op-code Routine
 *******************************************************************************
-
             END           START
 
 
