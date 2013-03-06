@@ -83,7 +83,8 @@ Greeting	MOVE.B		#task0,D0		;Start of Greeting. Loads D0 with text from greeting
 			BRA			greetErr		;Display Error - invalid input	
 
 *Prompts and processes Starting Address
-procStart   MOVE.B	    #task1,D0		;D0 holds input from user
+procStart   JSR         clr_regs        ;Clear out data from Registers
+            MOVE.B	    #task1,D0		;D0 holds input from user
 			LEA			stAdd,A1		;A1 holds string asking for start
 			MOVE.W		stAddL,D1		;D1 holds length of start string
 			TRAP		#15				;Run
@@ -145,10 +146,6 @@ procEnd		MOVE.B		#task1,D0		;D0 holds task1, print wo CR
 			MOVE.L		D7,end_hex		;Set end_hex to shifted address value
 			MOVE.B		#task1,D0		;Get input from user
 			BRA         CONTROL         ;start process to ocr
-IO_OUTPUT   LEA         tempOut,A1      ;Load temporary output to A1
-			MOVE.W      tempOutL,D1     ;Load the length of the temp message
-			TRAP        #15             ;Run
-			BRA         Greeting        ;Branch back to Greeting
 
 CONTROL
             ; io branches here after validating addresses
@@ -158,14 +155,35 @@ CONTROL
             MOVE.L      (A2),D2         ; move end addr to reg
 ADDR_LOOP
             CMP.L       A4,D2           ; compare mem ptr to end addr
-            BLE         IO_OUTPUT       ; if less then, branch to output
-            BSR         OCR             ; if greater, branch to OCR
-            BRA         ADDR_LOOP       ; loop
+            BLT         IO_OUTPUT       ; Move to print buffer
+            BSR         OCR             ; Process next OP-Code
+            BRA         ADDR_LOOP       ; Continue processing Address Range
+
+IO_OUTPUT   LEA         validB,A2       ;Load buffer start addr into A1
+            LEA         validB_end,A3   ;Load buffer ending addr into A3
+            MOVE.L      #validB_end,D0  ;Copy end to D0
+            MOVE.L      A2,A1
+   			TRAP        #13             ;Write to display        
+            
+EXIT_IO     BRA         Greeting
 
 
 *******************************************************************************
 *                            I/O Subroutines
 *******************************************************************************
+*******************************************************************************
+*clear_regs - Clears Out Data/Addresss Registers
+*******************************************************************************
+clr_regs    CLR.L       D0              ;Clear out D0
+            CLR.L       D1              ;Clear out D1
+            CLR.L       D2              ;Clear out D2
+            CLR.L       D3              ;Clear out D3
+            CLR.L       D4              ;Clear out D4
+            CLR.L       D5              ;Clear out D5
+            CLR.L       D6              ;Clear out D6
+            CLR.L       D7              ;Clear out D7
+            RTS
+            
 *******************************************************************************
 * conv_to_hex - Converts an ASCII string to a hex value
 *******************************************************************************
@@ -376,7 +394,9 @@ col_template        DC.B        CR,LF,CR,LF,'MEMORY LOCATION    OP-CODE     OPER
 c_template_len      DC.W        42              ;Length of Column Template
 
 validB              DS.B        80              ;80 Bytes for valid buffer
+validB_end                                      ;Used for address index
 invalidB            DS.B        80              ;80 Bytes for invalid buffer
+invalidB_end                                    ;Used for address index
 temp                DS.B        30              ;30 bytes for instructions
 carr_ret            DC.B        CR
 carr_retLen         DC.B        1
@@ -2257,6 +2277,10 @@ overflow_set
 *~Tab type~1~
 *~Tab size~4~
 
+*~Font name~Courier New~
+*~Font size~10~
+*~Tab type~1~
+*~Tab size~4~
 *~Font name~Courier New~
 *~Font size~10~
 *~Tab type~1~
