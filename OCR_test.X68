@@ -47,7 +47,7 @@ DEST
 _SRCE        DC.B        ' <SRCE>',0
 _DEST        DC.B        ',<DEST>',0
 
-validB      DS.W        10   ; buffer stores addresses of defined constants
+validB      DS.W        6   ; buffer stores addresses of defined constants
 INPUT       DC.W        $4E71,$4400,$4450,$44A0,$4EF9,$4E90,$4E75,$12C0
             DC.W        $3300,$22C0,$1218,$3208,$2218,$3240,$2248,$D2D0
             DC.W        $D3D8,$0619,$0651,$06A1,$5011,$5041,$5099,$92D8
@@ -675,6 +675,7 @@ LF          EQU         $0A
 *                            End Op-code Routine
 *******************************************************************************
             END           START
+
 
 
 *~Font name~Courier New~
