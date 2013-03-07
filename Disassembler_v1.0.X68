@@ -216,7 +216,7 @@ clr_regs    CLR.L       D0              ;Clear out D0
             CLR.L       D6              ;Clear out D6
             CLR.L       D7              ;Clear out D7
             RTS
-            
+
 *******************************************************************************
 * conv_to_hex - Converts an ASCII string to a hex value
 *******************************************************************************
@@ -521,14 +521,14 @@ curct		DS.W	    1	            ;current count inside the good buffer
 
 OCR ; subroutine called by I/O
             MOVEM.L     A0-A3/A5-A6/D0-D7,-(SP)
+            BSR         CLR_REGS   ; clear registers D0-D7, start fresh
             LEA         validB,A6  ; load pointer to good buffer into A6
             MOVE.W      (A4)+,D1   ; A4, universal ptr to next op-code mem addr
                                    ; D1 holds original op-code word until
                                    ; routine is finished
-
             MOVEQ       #3,D0                   ; Iso-task 3: isolate d12-d15
             BSR         ISO_BITS
-                                                **Branches**
+
             CMP.B       #0,D2
             BEQ         ORI_ANDI_SUBI_ADDI_EORI_CMPI ; ORI,ANDI,SUBI,EORI,CMPI
             CMP.B       #3,D2
