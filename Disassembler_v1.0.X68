@@ -964,7 +964,7 @@ ISO_D0_TO_D5_FOR_EA     ; send source <ea> bits to EAR
             BSR         ISO_BITS
             MOVE.B      D2,D0           ; load isolated bits to D0, used by EA
             MOVE.L      #0,D1
-            BSR         EAR_decode      ; call EA subroutine
+            ;BSR         EAR_decode      ; call EA subroutine
             RTS                         ; return to op-code branch
 
 ISO_D6_TO_D11_FOR_EA    ; send dest <ea> bits to EAR
@@ -973,7 +973,7 @@ ISO_D6_TO_D11_FOR_EA    ; send dest <ea> bits to EAR
             BSR         SWAP_REG_MODE
             MOVE.W      D2,D0           ; load isolated bits to D0, used by EA
             MOVE.L      #1,D1
-            BSR         EAR_decode      ; call EA subroutine
+            ;BSR         EAR_decode      ; call EA subroutine
             RTS                         ; return to op-code branch
 
 d12tod15    ; Isolate bits d12-d15 and assign them to register D2
