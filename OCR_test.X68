@@ -4,12 +4,12 @@
 START
 *************************** DEV TEST PURPOSES ONLY ****************************
             LEA         INPUT,A4
+            LEA         END_INPUT,A5
 NEXT
             BSR         OCR
             BSR         DISPLAY
-            MOVEQ       #1,D0
-            CMP.B       #79,D0
-            BNE         NEXT
+            CMPA.L      A5,A4
+            BLE         NEXT
             STOP        #$2700
 
 DISPLAY
@@ -21,7 +21,7 @@ LOOP
             BEQ         QUIT
             BSR         TO_CONSOLE
             BRA         LOOP
-TO_CONSOLE            
+TO_CONSOLE
             MOVEQ       #14,D0      ; load trap task to display
             TRAP        #15         ; display
             RTS
@@ -48,17 +48,51 @@ _SRCE        DC.B        ' <SRCE>',0
 _DEST        DC.B        ',<DEST>',0
 
 validB      DS.W        6   ; buffer stores addresses of defined constants
-INPUT       DC.W        $4E71,$4400,$4450,$44A0,$4EF9,$4E90,$4E75,$12C0
-            DC.W        $3300,$22C0,$1218,$3208,$2218,$3240,$2248,$D2D0
-            DC.W        $D3D8,$0619,$0651,$06A1,$5011,$5041,$5099,$92D8
-            DC.W        $93D8,$0411,$0441,$0491,$C218,$C240,$C2B9,$C119
-            DC.W        $C159,$C1B9,$0211,$0251,$0299,$8220,$8240,$8298
-            DC.W        $8139,$8161,$8199,$0021,$0051,$00A1,$B119,$B159
-            DC.W        $B199,$0A01,$0A41,$0A99,$E121,$E161,$E1A1,$E021
-            DC.W        $E241,$E0A1,$E139,$E359,$E1B9,$E039,$E259,$E0B9
-            DC.W        $B210,$B240,$B298,$B2C0,$B3D8,$0C11,$0C41,$0CB9
-            DC.W        $6400,$6500,$6700,$6800,$6900,$6F00,$2700
-
+INPUT
+            DC.W        $4E71,$4400,$4410,$4418,$4420,$4439,$4439,$4440,$4450
+            DC.w   $4458,$4460,$4479,$4479,$4480,$4490,$4498,$44A0,$44B9,$44B9
+            DC.w   $4ED0,$4EF9,$4EF9,$4E90,$4EB9,$4EB9,$4E75,$1200,$1280,$12C0
+            DC.w   $1300,$13C0,$13C0,$3200,$3280,$32C0,$3300,$33C0,$33C0,$2200
+            DC.w   $2280,$22C0,$2300,$23C0,$23C0,$1200,$1210,$1218,$1220,$1039
+            DC.w   $1039,$123C,$3200,$3208,$3210,$3218,$3220,$3039,$3039,$323C
+            DC.w   $2200,$2208,$2210,$2218,$2220,$2039,$2039,$223C,$3240,$3248
+            DC.w   $3250,$3258,$3260,$3279,$3279,$327C,$2240,$2248,$2250,$2258
+            DC.w   $2260,$2279,$2279,$227C,$D2C0,$D2C8,$D2D0,$D2D8,$D2E0,$D2F9
+            DC.w   $D2F9,$D2FC,$D3C0,$D3C8,$D3D0,$D3D8,$D3E0,$D3F9,$D3F9,$D3FC
+            DC.w   $0601,$0611,$0619,$0621,$0639,$0639,$0641,$0651,$0659,$0661
+            DC.w   $0679,$0679,$0681,$0691,$0699,$06A1,$06B9,$06B9,$5001,$5011
+            DC.w   $5019,$5021,$5039,$5039,$5041,$5049,$5051,$5059,$5061,$5079
+            DC.w   $5079,$5081,$5089,$5091,$5099,$50A1,$50B9,$50B9,$92C0,$92C8
+            DC.w   $92D0,$92D8,$92E0,$92F9,$92F9,$92FC,$93C0,$93C8,$93D0,$93D8
+            DC.w   $93E0,$93F9,$93F9,$93FC,$0401,$0411,$0419,$0421,$0439,$0439
+            DC.w   $0441,$0451,$0459,$0461,$0479,$0479,$0481,$0491,$0499,$04A1
+            DC.w   $04B9,$04B9,$C200,$C210,$C218,$C220,$C239,$C239,$C23C,$C240
+            DC.w   $C250,$C258,$C260,$C279,$C279,$C27C,$C280,$C290,$C298,$C2A0
+            DC.w   $C2B9,$C2B9,$C2BC,$C111,$C119,$C121,$C139,$C139,$C151,$C159
+            DC.w   $C161,$C179,$C179,$C191,$C199,$C1A1,$C1B9,$C1B9,$0201,$0211
+            DC.w   $0219,$0221,$0239,$0239,$0241,$0251,$0259,$0261,$0279,$0279
+            DC.w   $0281,$0291,$0299,$02A1,$02B9,$02B9,$8200,$8210,$8218,$8220
+            DC.w   $8239,$8239,$823C,$8240,$8250,$8258,$8260,$8279,$8279,$827C
+            DC.w   $8280,$8290,$8298,$82A0,$82B9,$82B9,$82BC,$8111,$8119,$8121
+            DC.w   $8139,$8139,$8151,$8159,$8161,$8179,$8179,$8191,$8199,$81A1
+            DC.w   $81B9,$81B9,$0001,$0011,$0019,$0021,$0039,$0039,$0041,$0051
+            DC.w   $0059,$0061,$0079,$0079,$0081,$0091,$0099,$00A1,$00B9,$00B9
+            DC.w   $B101,$B111,$B119,$B121,$B139,$B139,$B141,$B151,$B159,$B161
+            DC.w   $B179,$B179,$B181,$B191,$B199,$B1A1,$B1B9,$B1B9,$0A01,$0A11
+            DC.w   $0A19,$0A21,$0A39,$0A39,$0A41,$0A51,$0A59,$0A61,$0A79,$0A79
+            DC.w   $0A81,$0A91,$0A99,$0AA1,$0AB9,$0AB9,$E121,$E161,$E341,$E1D1
+            DC.w   $E1D9,$E1E1,$E1F9,$E1F9,$E1A1,$E021,$E061,$E241,$E0D1,$E0D9
+            DC.w   $E0E1,$E0F9,$E0F9,$E0A1,$E139,$E179,$E359,$E7D1,$E7D9,$E7E1
+            DC.w   $E7F9,$E7F9,$E1B9,$E039,$E079,$E259,$E6D1,$E6D9,$E6E1,$E6F9
+            DC.w   $E6F9,$E0B9,$B200,$B210,$B218,$B220,$B239,$B239,$B23C,$B240
+            DC.w   $B248,$B250,$B258,$B260,$B279,$B279,$B27C,$B280,$B288,$B290
+            DC.w   $B298,$B2A0,$B2B9,$B2B9,$B2BC,$B2C0,$B2C8,$B2D0,$B2D8,$B2E0
+            DC.w   $B2F9,$B2F9,$B2FC,$B3C0,$B3C8,$B3D0,$B3D8,$B3E0,$B3F9,$B3F9
+            DC.w   $B3FC,$0C01,$0C11,$0C19,$0C21,$0C39,$0C39,$0C41,$0C51,$0C59
+            DC.w   $0C61,$0C79,$0C79,$0C81,$0C91,$0C99,$0CA1,$0CB9,$0CB9,$6400
+            DC.w   $6500,$6700,$6C00,$6E00,$6200,$6F00,$6300,$6D00,$6B00,$6600
+            DC.w   $6A00,$6800,$6900
+END_INPUT
 *******************************************************************************
 */////////////////////////////////////////////////////////////////////////////*
 *                               Op-Code Routine                               *
@@ -450,45 +484,68 @@ ASd_ROd
             MOVEQ       #1,D0               ; Iso-task 1: isolate bits d6-d7
             BSR         ISO_BITS
             CMP.B       #3,D2
-            BLT         WHICHONE
-            BRA         DATA
-                                            **Branches**
-WHICHONE
+            BEQ         ASd_ROd_MS
+            BRA         ASd_ROd_RS
+
+ASd_ROd_RS
             MOVEQ       #6,D0               ; Iso-task 6: isolate d3-d4
             BSR         ISO_BITS
-
             CMP.B       #0,D2
-            BEQ         ASd_               ; ASd
+            BEQ         ASd_RS               ; ASd
             CMP.B       #3,D2
-            BEQ         ROd_               ; ROd
+            BEQ         ROd_RS               ; ROd
             BRA         DATA                ; value not recognized
 
-ASd_
+ASd_RS
             MOVE.W      #_ASd,(A6)+         ; push address of ASd to buffer
-            MOVEQ       #4,D0               ; Iso-task 4: isolate bits d8
-            BSR         ISO_BITS
-            BSR         LR                  ; add left or right
-            MOVEQ       #1,D0               ; Iso-task 1: isolate bits d6-d7
-            BSR         ISO_BITS
-            BSR         BWL                 ; append .B, .W, or .L           
-    * Isolate bits d0-d5 and send them to EA routine before return
+            BSR         DIRECTION
+            BSR         ASd_ROd_SIZE
             BSR         ISO_D0_TO_D5_FOR_EA     ; send source <ea> bits to EAR
             BRA         END_OCR
-ROd_
+ROd_RS
             MOVE.W      #_ROd,(A6)+         ; push address of ROd to buffer
-            MOVEQ       #4,D0               ; Iso-task 4: isolate bits d8
-            BSR         ISO_BITS
-            BSR         LR                  ; add left or right
-            MOVEQ       #1,D0               ; Iso-task 1: isolate bits d6-d7
-            BSR         ISO_BITS
-            BSR         BWL                 ; append .B, .W, or .L           
-    * Isolate bits d0-d5 and send them to EA routine before return
+            BSR         DIRECTION
+            BSR         ASd_ROd_SIZE
             BSR         ISO_D0_TO_D5_FOR_EA     ; send source <ea> bits to EAR
             BRA         END_OCR
 *******************************************************************************
+ASd_ROd_MS
+            MOVEQ       #2,D0       ; isolate d9-d11
+            BSR         ISO_BITS
+            CMP.B       #0,D2       ; 
+            BEQ         ASd_MS
+            CMP.B       #3,D2
+            BEQ         ROd_MS
+            BRA         DATA
+
+ASd_MS
+            MOVE.W      #_ASd,(A6)+         ; push address of ASd to buffer
+            BSR         DIRECTION
+            MOVE.W      #_WORD,(A6)+
+            BSR         ISO_D0_TO_D5_FOR_EA     ; send source <ea> bits to EAR
+            BRA         END_OCR
+ROd_MS
+            MOVE.W      #_ROd,(A6)+         ; push address of ROd to buffer
+            BSR         DIRECTION
+            MOVE.W      #_WORD,(A6)+
+            BSR         ISO_D0_TO_D5_FOR_EA     ; send source <ea> bits to EAR
+            BRA         END_OCR
+*******************************************************************************
+DIRECTION
+            MOVEQ       #4,D0               ; isolate d8
+            BSR         ISO_BITS
+            BSR         LR                  ; add left or right
+            RTS
+ASd_ROd_SIZE
+            MOVEQ       #1,D0               ; Iso-task 1: isolate bits d6-d7
+            BSR         ISO_BITS
+            BSR         BWL                 ; append .B, .W, or .L
+            RTS
+
+*******************************************************************************
 DATA ; value not recognized
             MOVE.W      #_DATA,(A6)+         ; push address of DATA to buffer
-            RTS
+            BRA         END_OCR
 
 ************************** ISOLATE BITS SUBROUTINE ****************************
 
@@ -675,6 +732,7 @@ LF          EQU         $0A
 *                            End Op-code Routine
 *******************************************************************************
             END           START
+
 
 
 
