@@ -39,7 +39,7 @@ LF			EQU		$0A					;ASCII value for Line feed
 CR			EQU		$0D					;ASCII value for Carriage return
 space		EQU		$20					;ASCII value for space
 comma		EQU		$2C					;ASCII value for comma
-task0		EQU		00					;Task0 from Berger, print a string to screen
+task0		EQU		00					;Task0 from Berger, print string w/ newline
 task1		EQU		01					;Task1 from Berger, prompt for input w/o newline
 task2		EQU		02					;Task2 from Berger, prompt and wait for input
 start		EQU		$1000				;Starting address of program
@@ -150,23 +150,24 @@ procEnd		MOVE.B      #0,D6           ;Clear Bad Flag
 
 CONTROL
             ; io branches here after validating addresses
-            LEA         start_hex,A4    ; load addr of ptr to addr reg A4
-            LEA         end_hex,A5      ; load ending address to A5
-            MOVE.L      (A4),A4         ; move start address to ptr
-            MOVE.L      (A5),D2         ; move end addr to reg
+            LEA         start_hex,A4    ;load addr of ptr to addr reg A4
+            LEA         end_hex,A5      ;load ending address to A5
+            MOVE.L      (A4),A4         ;move start address to ptr
+            MOVE.L      (A5),D2         ;move end addr to reg
             MOVE.B		#task0,D0		;D0 holds task2, print w CR
 			LEA			col_template,A1	;A1 holds error string
 			MOVE.W		c_temp_len,D1   ;D1 holds length of start error string
 			TRAP		#15				;Run
-			BRA         ADDR_LOOP
-ADDR_LOOP   MOVE.L      #1,D0
-            BSR         clrBuf          ; clear the buffer
-            MOVE.L      (A5),D2         ; Set Ending Address
-            CMP.L       (A4)+,D2        ; compare mem ptr to end addr
-            BLT         EXIT_IO         ; Move to print buffer
-            BSR         OCR            ; Process next OP-Code
-            BSR         prtBuf          ; Print value in buffer
-            BRA         ADDR_LOOP       ; Continue processing Address Range            
+			MOVE.L      #1,D0           ;Set to force the buffer to clear
+			BSR         clrBuf          ;clear the buffer
+ADDR_LOOP   
+            LEA         end_hex,A5      ;load ending address to A5
+            MOVE.L      (A5),D2
+            CMPA.L      (A5),A4         ;compare mem ptr to end addr
+            BGT         EXIT_IO         ;Move to print buffer
+            BSR         OCR             ;Process next OP-Code
+            BSR         prtBuf          ;Print value in buffer
+            BRA         ADDR_LOOP       ;Continue processing Address Range            
 EXIT_IO     
             BRA         Greeting
 
@@ -177,12 +178,16 @@ EXIT_IO
 *******************************************************************************
 *printBuf - Prints value in buffer to Console
 *******************************************************************************
-prtBuf      MOVE.B      #task0,D0
-            LEA         validB,A0       ;Get Buffer Start
-            MOVE.B      #80,D1
-
-            TRAP        #15
-            RTS							*return to subroutine
+prtBuf      LEA         validB,A0       ;Get Buffer Start
+            LEA         validB_end,A2   ;Get End Buffer
+prtLoop     CMPA.W      A0,A2           ;Check if we're at end of buffer
+            BLT         exitBufPrt      ;Exit Subroutine
+            CMPI.W      #$0000,(A0)     
+            BEQ         exitBufPrt
+            MOVE.W      (A0)+,A1        ;Store word to write
+            TRAP        #15             ;Print
+            BRA         prtLoop
+exitBufPrt  RTS							*return to subroutine
 *******************************************************************************
 *clrBuf - Fills buffer with blanks
 *******************************************************************************
@@ -190,7 +195,7 @@ clrBuf      LEA         validB,A0       ;Get Buffer Start
             LEA         validB_end,A1   ;Get End of buffer
 clrLoop     CMPA.L      A0,A1           ;Check if we're at end address of buffer
             BLT         exitBuf         ;End of buffer
-            MOVE.L      #space,(A0)+    ;Write space to buffer
+            MOVE.L      #0,(A0)+        ;Write zeros to buffer
             BRA         clrLoop
 exitBuf		RTS							*return to subroutine
 
@@ -316,9 +321,8 @@ send_data_buf
             ANDI.W	    #$00FF,D0	    ;Mask Most Significant Bits
 		    MULU.W	    #2,D0		    ;Calculate Offset
 		    MOVE.W 	    #2,D1 		    ;Store the Length
-		    LEA	        (A1,D0.W),A1	;Get Index including Offset
-		    BSR	        send_instr_buf	;Send to Buffer    
-            MOVEM.L     (SP)+,D0-D2/A1  ;Restore Stack to Registers
+		    LEA	        (A1,D0.W),A1	;Get Index including Offset at D0
+		    MOVE.W      (A1),(A6)+
             RTS                         ;Return
 
 *******************************************************************************
@@ -376,7 +380,7 @@ send_inv	MOVE.L		#invalidB,A1	;Start of Invalid Buffer
 			TRAP		#15				
 			BRA			instr_exit		;Branch to exit
 send_val	MOVE.L		#validB,A1		;move A1 to hold string
-			MOVE.B		#task0,D0		;D0,A1, and D1 sub set up
+			MOVE.B		#task0,D0		;Load task0
 			TRAP		#15				
 			BRA			instr_exit		;Branch to exit
 instr_exit	MOVEM.L		(SP)+,A0/D0/D1	;restore stack
@@ -413,13 +417,15 @@ decision	        DS.B	    20	            ;to hold User's Response
 start_hex           DS.L        1               ;Starting Value in Hex  
 end_hex             DS.L        1               ;Ending Value in Hex    
 dataSt              DS.B        20              ;Continue Conditional Response
-col_template        DC.B        CR,LF,CR,LF,'MEMORY LOCATION    OP-CODE     OPERAND',CR,LF
-c_temp_len      DC.W        42              ;Length of Column Template
+col_template        DC.B        CR,LF,'MEMORY LOCATION    OP-CODE     OPERAND'
+c_temp_len          DC.W        42              ;Length of Column Template
 
-validB              DS.B        80              ;80 Bytes for valid buffer
+validB              DS.B        20              ;20 Bytes for valid buffer
 validB_end                                      ;Used for address index
-invalidB            DS.B        80              ;80 Bytes for invalid buffer
+validB_len          EQU         20
+invalidB            DS.B        20              ;80 Bytes for invalid buffer
 invalidB_end                                    ;Used for address index
+invalidB_len        EQU         20
 temp                DS.B        30              ;30 bytes for instructions
 carr_ret            DC.B        CR
 carr_retLen         DC.B        1
@@ -431,7 +437,7 @@ data_regs	        DC.B  	'D0','D1','D2','D3','D4','D5','D6','D7'
 
 ************************ IO Prompts and Messages*******************************
 ascii_w     DS.W        1
-greet		DC.B	    'SaB Disassembler - CSS 422 Winter',CR,LF
+greet		DC.B	    CR,LF,'SaB Disassembler - CSS 422 Winter',CR,LF
 		    DC.B	    'Start Disassembler?',CR,LF
 		    DC.B	    'Please enter Y for yes, or N for no.' 
 greetL      DC.W        121
@@ -464,9 +470,6 @@ contiL		DC.W	    69
 
 curbuf		DS.L	    1	            ;current position in the buffer
 curct		DS.W	    1	            ;current count inside the good buffer
-
-tempOut     DC.B        'This is where the opcodes are processed',CR,LF
-tempOutL    DC.W        41
 
 *******************************************************************************
 *                               End I/O Routine
@@ -945,7 +948,7 @@ ISO_D6_TO_D11_FOR_EA    ; send dest <ea> bits to EAR
             RTS                         ; return to op-code branch
 
 d12tod15    ; Isolate bits d12-d15 and assign them to register D2
-            MOVE.W      D1,D2       ; avoid overwrite of original
+            MOVE.W      D1,D2      ; avoid overwrite of original
             ROL.W       #4,D2       ; move d12-d15 -> d0-d3
             ANDI.W      #$F,D2      ; mask to keep only four bits
             RTS                     ; return to op-code branch
@@ -2304,6 +2307,17 @@ overflow_set
 *~Font size~10~
 *~Tab type~1~
 *~Tab size~4~
+
+
+
+
+
+
+
+
+
+
+
 
 
 
