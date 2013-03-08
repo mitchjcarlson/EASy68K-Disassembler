@@ -57,6 +57,7 @@ lwY			EQU		$79					;ASCII value for y for User Prompt
 outCt		EQU		25					;Will show 25 lines on each screen, can adjust
 region		EQU		80					;decimal number 80 to help fill
 
+
 			ORG			start			;Program Start
 			LEA			stack,SP		;Stack pointer in A7
             
@@ -184,11 +185,12 @@ prtBuf      LEA         validB,A0       ;Get Buffer Start
 ;            BLT         exitBufPrt      ;Exit Subroutine
 ;            CMPI.W      #$0000,(A0)     
 prtLoop
-            CMPI.W      #$FFFF,(A0)     
+            CMPI.B      #$FF,(A0)     
             BEQ         exitBufPrt
 ;            MOVE.W      (A0)+,A1        ;Store word to write
             MOVE.W      (A0),A1        ;Store word to write
             MOVE.W      #$FFFF,(A0)+
+            MOVE.B      #4,D1           ;Length to print
             TRAP        #15             ;Print
             BRA         prtLoop
 exitBufPrt  RTS							*return to subroutine
@@ -200,7 +202,7 @@ clrBuf      LEA         validB,A0       ;Get Buffer Start
 clrLoop     CMPA.L      A0,A1           ;Check if we're at end address of buffer
             BLT         exitBuf         ;End of buffer
 ;            MOVE.L      #0,(A0)+        ;Write zeros to buffer
-            MOVE.L      #$FFFFFFFF,(A0)+        ;Write zeros to buffer
+            MOVE.L      #$FFFFFFFF,(A0)+ ;Write FFFF to buffer
             BRA         clrLoop
 exitBuf		RTS							*return to subroutine
 
@@ -307,29 +309,30 @@ prtExit		MOVEM.L		(SP)+,A0/D0/D1		*Clean Up
 *send_addr_buf - Sends an Address Register to the Buffer
 *******************************************************************************
 send_addr_buf
-            MOVEM.L     D0-D2/A1,-(SP)  ;Send Registers to Stack
+            MOVEM.L     D0-D2/A1-A3/A5,-(SP)  ;Send Registers to Stack
             LEA         addr_regs,A1    ;Load Address Registers
             ANDI.W	    #$00FF,D0	    ;Mask Most Significant Bits
 		    MULU.W	    #2,D0		    ;Calculate Offset
 		    MOVE.W 	    #2,D1 		    ;Store the Length
 		    LEA	        (A1,D0.W),A1	;Get Index including Offset
+		    MOVE.W      A1,(A6)+
 		    ;BSR	        send_instr_buf	;Send to Buffer    
-            MOVEM.L     (SP)+,D0-D2/A1  ;Restore Stack to Registers
+            MOVEM.L     (SP)+,D0-D2/A1-A3/A5  ;Restore Stack to Registers
             RTS                         ;Return
 
 *******************************************************************************
 *send_data_buf - Sends a Data Register to the Buffer
 *******************************************************************************
 send_data_buf
-            MOVEM.L     D0-D2/A1,-(SP)  ;Send Registers to Stack
+            MOVEM.L     D0-D2/A1-A3/A5,-(SP)  ;Send Registers to Stack
             LEA         data_regs,A1    ;Load Data Registers
             ANDI.W	    #$00FF,D0	    ;Mask Most Significant Bits
 		    MULU.W	    #2,D0		    ;Calculate Offset
 		    MOVE.W 	    #2,D1 		    ;Store the Length
-		    LEA	        (A1,D0.W),A1	;Get Index including Offset at D0
-		    ;MOVE.W      (A1),(A6)+
-            MOVE.L      (A4)+,D5        ;EA should pop off two words
-            MOVEM.L     (SP)+,D0-D2/A1  ;Restore Stack to Registers
+		    LEA	        (A1,D0.W),A1	;Get Index including Offset starting at D0
+		    MOVE.W      A1,(A6)+
+            ;MOVE.L      (A4)+,D5        ;EA should pop off two words
+done        MOVEM.L     (SP)+,D0-D2/A1-A3/A5  ;Restore Stack to Registers
             RTS                         ;Return
 
 *******************************************************************************
@@ -520,7 +523,7 @@ curct		DS.W	    1	            ;current count inside the good buffer
 * --JSR OCR is a temporary call, remove when I/O actual utilizes subroutine
 
 OCR ; subroutine called by I/O
-            MOVEM.L     A0-A3/A5-A6/D0-D7,-(SP)
+            MOVEM.L     A0-A3/A5/D0-D7,-(SP)
             BSR         CLR_REGS   ; clear registers D0-D7, start fresh
             LEA         validB,A6  ; load pointer to good buffer into A6
             MOVE.W      (A4)+,D1   ; A4, universal ptr to next op-code mem addr
@@ -555,7 +558,7 @@ OCR ; subroutine called by I/O
 END_OCR
             ; end of routine, reload registers
             MOVE.W      #NEW_LINE,(A6)+         ; append to the end of every op
-            MOVEM.L     (SP)+,A0-A3/A5-A6/D0-D7
+            MOVEM.L     (SP)+,A0-A3/A5/D0-D7
             RTS                                 ; return to I/O
 
 ************************ ORI, ANDI, SUBI, EORI, CMPI **************************
@@ -964,7 +967,7 @@ ISO_D0_TO_D5_FOR_EA     ; send source <ea> bits to EAR
             BSR         ISO_BITS
             MOVE.B      D2,D0           ; load isolated bits to D0, used by EA
             MOVE.L      #0,D1
-            ;BSR         EAR_decode      ; call EA subroutine
+            BSR         EAR_decode      ; call EA subroutine
             RTS                         ; return to op-code branch
 
 ISO_D6_TO_D11_FOR_EA    ; send dest <ea> bits to EAR
@@ -973,7 +976,7 @@ ISO_D6_TO_D11_FOR_EA    ; send dest <ea> bits to EAR
             BSR         SWAP_REG_MODE
             MOVE.W      D2,D0           ; load isolated bits to D0, used by EA
             MOVE.L      #1,D1
-            ;BSR         EAR_decode      ; call EA subroutine
+            BSR         EAR_decode      ; call EA subroutine
             RTS                         ; return to op-code branch
 
 d12tod15    ; Isolate bits d12-d15 and assign them to register D2
@@ -1160,14 +1163,14 @@ LF          EQU         $0A
 *             to the buffer for the I/O to Display
 *******************************************************************************
 EAR_decode  
-            MOVEM.L     A1-A3/A5/D0-D2/D4/D5,-(SP)       ;Save data from registers to stack
+            MOVEM.L     A0-A3/A5/D0/D2-D7,-(SP)    ;Save data from registers to stack
             LEA         ea_index_table,A1       ;Get reference to the EA Table
             MOVE.W      D0,D2                   ;Get a copy of the six EA bits
             MOVE.B      #3,D1                   ;Store number of bits we wish to shift
             LSR.W       D1,D0                   ;Shift to the Right
             MULU	    #6,D0			        ;Form Offset for passing to Jump Index table
 	        JSR	        00(A1,D0)		        ;Now we have the index, back to Index table
-	        MOVEM.L     (SP)+,A1-A3/A5/D0-D2/D4/D5       ;Restore registers from stack
+	        MOVEM.L     (SP)+,A0-A3/A5/D0/D2-D7       ;Restore registers from stack
             RTS                                 ;Return 
 
 *Jump Index Table
@@ -1186,6 +1189,7 @@ ea_index_table
 eaindex000  
             MOVE	    D2,D0		            ;Get EA from D2 (6bits)
 	        ANDI	    #7,D0		            ;Grab Register (3bits)
+	        MOVE.W      #tab_sign,(A6)+         ;Insert a tab
 		    BSR	        send_data_buf           ;Send data to buffer
 		    RTS                                 ;Return
 
@@ -1198,83 +1202,85 @@ eaindex001
             
 ****** Indirect Address Register - Returns Address within Parentheses - (An) *******
 eaindex010  
+            *Add Tab to Buffer
+            MOVE.W      #tab_sign,(A6)+         ;Load tab to buffer
+            
             *Get the Open Paren
             LEA	        open_paren,A1	        ;ASCII for Open Paren
-		    MOVE.W	    open_parenLen,D1        ;Get the length
-		    ;BSR	        send_instr_buf	        ;Add the Paren to the buffer
+		    MOVE.W	    A1,(A6)+                ;Load open paren to buffer
 
             *Get the Address
 		    CLR.L	    D0		                ;Empty data register
 		    MOVE	    D2,D0		            ;Store EA bits (6bits)
 		    ANDI	    #7,D0		            ;AND with 3-bits to get values
-		    ;BSR	        send_addr_buf           ;Add Address to buffer after Open Paren
+		    BSR	        send_addr_buf           ;Add Address to buffer after Open Paren
 
             *Get the Close Paren
 		    CLR.L	    D1		                ;Empty data register
 		    LEA	        close_paren,A1	        ;ASCII for Close Paren
-		    MOVE.W	    close_parenLen,D1	    ;Get the length
-		    ;BSR	        send_instr_buf          ;Add Close Paren to buffer after addr
+		    MOVE.W      A1,(A6)+                ;Load close Paren to buffer
             RTS                                 ;Return
             
 ************** Indirect Address Register with Post-Increment - (An)+ ***************	    
 eaindex011  
+            *Add Tab to Buffer
+            MOVE.W      #tab_sign,(A6)+         ;Load tab to buffer
+            
             *Get the Open Paren
             LEA	        open_paren,A1	        ;ASCII for Open Paren
-		    MOVE.W	    open_parenLen,D1	    ;Get the length
-		    ;BSR	        send_instr_buf	        ;Add the Paren to the buffer
+		    MOVE.W      A1,(A6)+                ;Add to buffer
 
             *Get the Address
 		    CLR.L	    D0		                ;Empty data register
 		    MOVE	    D2,D0		            ;Store EA bits (6bits)
 		    ANDI	    #7,D0		            ;AND with 3-bits to get values
-		    ;BSR	        send_addr_buf           ;Add Address to buffer after Open Paren
+		    BSR	        send_addr_buf           ;Add Address to buffer after Open Paren
 
             *Get the Close Paren
 		    CLR.L	    D1		                ;Empty data register
 		    LEA	        close_paren,A1	        ;ASCII for Close Paren
-		    MOVE.W	    close_parenLen,D1	    ;Get the length
-		    ;BSR	        send_instr_buf          ;Add Close Paren to buffer after addr
-            RTS                                 ;Return
-            
+		    MOVE.W      A1,(A6)+                ;Add to buffer
+                      
             *Get the Plus Sign
-            CLR.L       D0                      ;Clear Register
+            CLR.L       D1                      ;Clear Register
             LEA         plus_sign,A1            ;ASCII for Plus Sign
-            MOVE.W      plus_signLen,D0         ;Get the length
-            BSR         send_instr_buf          ;Add Plus Sign to buffer after Close Paren
+            MOVE.W      A1,(A6)+                ;Add to buffer
             RTS                                 ;Return
             
 *************** Indirect Address Register with Pre-Decrement - -(An) ***************
 eaindex100  
+            *Add Tab to Buffer
+            MOVE.W      #tab_sign,(A6)+         ;Load tab to buffer
+            
             *Get Minus Sign
             LEA         minus_sign,A1           ;ASCII for Minus Sign
-            MOVE.W      minus_signLen,D1        ;Get the length of the Minus Sign
-            ;BSR         send_instr_buf          ;Add Minus Sign to Buffer
+            MOVE.W      A1,(A6)+                ;Add to buffer
 
             *Get Open Parentheses Sign
             CLR.L       D1                      ;Clear Register
             LEA	        open_paren,A1	        ;ASCII for Open Paren
-		    MOVE.W	    open_parenLen,D1	    ;Get the length
-		    ;BSR	        send_instr_buf	        ;Add the Paren to the buffer
+            MOVE.W      A1,(A6)+                ;Add to buffer
 
             *Store Address to Buffer
 		    CLR.L	    D0		                ;Empty data register
 		    MOVE	    D2,D0		            ;Store EA bits (6bits)
 		    ANDI	    #7,D0		            ;AND with 3-bits to get values
-		    ;BSR	        send_addr_buf           ;Add Address to buffer after Open Paren
+		    BSR	        send_addr_buf           ;Add Address to buffer after Open Paren
 
             *Get Close Parentheses Sign
 		    CLR.L	    D1		                ;Empty data register
 		    LEA	        close_paren,A1	        ;ASCII for Close Paren
-		    MOVE.W	    close_parenLen,D1	    ;Get the length
-		    ;BSR	        send_instr_buf          ;Add Close Paren to buffer after addr
+            MOVE.W      A1,(A6)+                ;Add to buffer
             RTS                                 ;Return
 
 ******************** Indirect Address Register with an Index ***********************
 eaindex101  
+            *Add Tab to Buffer
+            MOVE.W      #tab_sign,(A6)+         ;Load tab to buffer
+            
             *Get Dollar Sign
             LEA         dollar_sign,A1          ;ASCII for Dollar Sign
-            MOVE.W      dollar_signLen,D1       ;Get the length of the Dollar Sign
-            BSR         send_instr_buf          ;Add Dollar Sign to Buffer
+            MOVE.W      A1,(A6)+                ;Add to buffer
             
             *Prep for conversion
             MOVE.W      (A5)+,A0                 ;Get 8-bit extension word
@@ -1285,26 +1291,23 @@ eaindex101
             
             *Move Hex value to Buffer
             MOVEA.L     A3,A1                   ;Move Hex value to A1
-            MOVE.W      #$4,D1                  ;Get the length of Hex value - Word
-            BSR         send_instr_buf          ;Add Hex value of Address to buffer
+            MOVE.W      A1,(A6)+                ;Add to buffer
             
             *Get Open Parentheses Sign
             CLR.L       D1                      ;Clear Register
             LEA	        open_paren,A1	        ;ASCII for Open Paren
-		    MOVE.W	    open_parenLen,D1        ;Get the length
-		    ;BSR	        send_instr_buf	        ;Add the Paren to the buffer
+		    MOVE.W      A1,(A6)+                ;Add to buffer
 
 		    *Store Address to Buffer
 		    CLR.L	    D0		                ;Empty data register
 		    MOVE	    D2,D0		            ;Store EA bits (6bits)
 		    ANDI	    #7,D0		            ;AND with 3-bits to get values
-		    ;BSR	        send_addr_buf           ;Add Address to buffer after Open Paren
+		    BSR	        send_addr_buf           ;Add Address to buffer after Open Paren
 
             *Get the Comma Sign
             CLR.L       D1                      ;Clear Register
             LEA	        comma_sign,A1	        ;ASCII for Comma
-		    MOVE.W	    comma_signLen,D1        ;Get the length
-		    ;BSR	        send_instr_buf	        ;Add the Comma to the buffer
+		    MOVE.W      A1,(A6)+                ;Add to buffer
 
 		    *Get Index Register
 		    MOVE.L      D5,D0                   ;Back up to D0
@@ -1327,27 +1330,23 @@ eaindex101
 add_long_buf
             CLR.L       D1                      ;Clear Register
             LEA         long_ext,A1             ;ASCII for .L
-            MOVE.W      long_extLen,D1          ;Get the length of Character
-            BSR         send_instr_buf          ;Add .L to buffer 
+            MOVE.W      A1,(A6)+                ;Add to buffer
             
             *Get Close Parentheses Sign
 		    CLR.L	    D1		                ;Empty data register
 		    LEA	        close_paren,A1	        ;ASCII for Close Paren
-		    MOVE.W	    close_paren,D1	        ;Get the length
-		    ;BSR	        send_instr_buf          ;Add Close Paren to buffer after addr
+		    MOVE.W      A1,(A6)+                ;Add to buffer
 		    RTS                                 ;Return
             
 add_word_buf
             CLR.L       D1                      ;Clear Register
             LEA         word_ext,A1             ;ASCII for .W
-            MOVE.W      word_extLen,D1          ;Get the length of Character
-            BSR         send_instr_buf          ;Add .W to buffer 
+            MOVE.W      A1,(A6)+                ;Add to buffer
             
             *Get Close Parentheses Sign
 		    CLR.L	    D1		                ;Empty data register
 		    LEA	        close_paren,A1	        ;ASCII for Close Paren
-		    MOVE.W	    close_paren,D1	        ;Get the length
-		    ;BSR	        send_instr_buf          ;Add Close Paren to buffer after addr
+		    MOVE.W      A1,(A6)+                ;Add to buffer
 		    RTS                                 ;Return
             		    
 ********************* PC, Immediate, or Absolute Addressing ************************
@@ -1359,11 +1358,12 @@ eaindex110
             RTS                                 ;Return when done
 
 ********************* PC, Immediate, or Absolute Addressing ************************
-eaindex111 ;Not Used
-            MOVE.L      (A4)+,D5 ; this pops the next two addresses off the
-                                 ; address stack. They are values used by the
-                                 ; EA routine and op-code hangs on them because
-                                 ; they look like something they're not
+eaindex111 
+            LEA         subindex_tbl,A1         ;Loads the Subindex Jump Table
+            MOVE        D2,D0                   ;Store EA original - 6 bits
+            ANDI        #7,D0                   ;Get the Register bits
+            MULU        #6,D0                   
+            JSR         00(A1,D0)               ;To SubIndex Jump Table
             RTS                                 ;Just Return
             
 ************************* aeindex110 Subindex Jump Table ***************************
@@ -1371,14 +1371,22 @@ subindex_tbl ;Uses Bitmask to differentiate Types
             JMP         easub000                ;Absolute Addressing - Word
             JMP         easub001                ;Absolute Addressing - Long
             JMP         easub010                ;Indirect Program Counter w/ Displacement
-            JMP         easub100                ;Immediate Data            
+            JMP         easub011                ;Unused
+            JMP         easub100                ;Immediate Data 
+            JMP         easub101                ;Unused
+            JMP         easub110                ;Unused
+            JMP         easub111                ;Unused
 
 ************************** Absolute Addressing - Word *************************
-easub000
+easub000    
+            *Add Tab to Buffer
+            MOVE.W      #tab_sign,(A6)+         ;Load tab to buffer
+            
+            LEA         asc_wrd,A3
+            
             *Get Dollar Sign
             LEA         dollar_sign,A1          ;ASCII for Dollar Sign
-            MOVE.W      dollar_signLen,D1       ;Get the length of the Dollar Sign
-            BSR         send_instr_buf          ;Add Dollar Sign to Buffer
+            MOVE.W      A1,(A6)+                ;Add to buffer
             
             *Prep for Conversion
             MOVE.W      (A5)+,D0                ;Get the WORD data
@@ -1389,20 +1397,21 @@ easub000
             
             *Store Hex Address to Buffer
             MOVEA.L     A3,A1                   ;Move ASCII value to A1
-            MOVE.W      #$4,D1                  ;Load the length of the word
-            BSR         send_instr_buf          ;Send the Address to Buffer
+            MOVE.W      A1,(A6)+                ;Add to buffer
             
-            MOVEA.L     #00000000,A3            ;Reset contents of A3
+            ;MOVEA.L     #00000000,A6            ;Reset contents of A3
             RTS                                 ;Return
             
 ************************** Absolute Addressing - Long *************************
 easub001
+            *Add Tab to Buffer
+            MOVE.W      #tab_sign,(A6)+         ;Load tab to buffer
+            
             LEA         ascii_w,A3              ;Get converted address word
             
             *Get Dollar Sign
             LEA         dollar_sign,A1          ;ASCII for Dollar Sign
-            MOVE.W      dollar_signLen,D1       ;Get the length of the Dollar Sign
-            BSR         send_instr_buf          ;Add Dollar Sign to Buffer
+            MOVE.W      A1,(A6)+                ;Add to buffer
             
             *Prep for Conversion - LONG
             MOVE.L      (A5)+,D0                ;Get the LONG data
@@ -1413,8 +1422,7 @@ easub001
             
             *Store Hex Address to Buffer
             MOVEA.L     A3,A1                   ;Move ASCII value to A1
-            MOVE.W      #$8,D1                  ;Load the length of the word - LONG
-            BSR         send_instr_buf          ;Send the Address to Buffer
+            MOVE.W      A1,(A6)+                ;Add to buffer
             
             MOVEA.L     #00000000,A3            ;Reset contents of A3
             RTS                                 ;Return
@@ -1493,6 +1501,10 @@ easub100_badLen
             MOVE.B      #1,D6                   ;Enable Bad Flag bit
             RTS                                 ;Return
 
+easub011    RTS
+easub101    RTS
+easub110    RTS
+easub111    RTS
 *******************************************************************************
 *EAR_movem - Sends the value of the list of registers found within the Register
 *            List Mask Field (RLMF) within the Extension word. 
@@ -1585,29 +1597,32 @@ movem_exit
 *******************************************************************************
 *                                 EA Library
 *******************************************************************************
-open_paren	    DC.B	'('		    ;Open Parentheses
+open_paren	    DC.B	'(',0		;Open Parentheses
 open_parenLen	DC.W	1	        ;Length of Open Parentheses
-close_paren	    DC.B	')'		    ;Close Parentheses
+close_paren	    DC.B	')',0		;Close Parentheses
 close_parenLen	DC.W	1	        ;Length of Close Parenthese
-plus_sign		DC.B	'+'		    ;Increment
+plus_sign		DC.B	'+',0		;Increment
 plus_signLen	DC.W	1		    ;Length of Increment
-minus_sign		DC.B	'-'		    ;Decrement
+minus_sign		DC.B	'-',0		;Decrement
 minus_signLen	DC.W	1		    ;Length of Decrement
-dollar_sign	    DC.B	'$'		    ;Dollar Sign
+dollar_sign	    DC.B	'$',0		;Dollar Sign
 dollar_signLen	DC.W	1	        ;Length of Dollar Sign
-comma_sign	    DC.B	','		    ;Comma
+comma_sign	    DC.B	',',0		;Comma
 comma_signLen	DC.W	1	        ;Length of the Comma
-word_ext		DC.B	'.W'	    ;Word Extension Indicator
+word_ext		DC.B	'.W',0	    ;Word Extension Indicator
 word_extLen	    DC.W	2	        ;Length of Word Extension
-long_ext		DC.B	'.L'	    ;Long Extension Indicator
+long_ext		DC.B	'.L',0	    ;Long Extension Indicator
 long_extLen	    DC.W	2	        ;Length of Long Extension
-prog_ctr		DC.B	'(PC)'	    ;Program Counter
+prog_ctr		DC.B	'(PC)',0	;Program Counter
 prog_ctrLen		DC.W	4		    ;Length of Program Couner
-f_slash   	    DC.B	'/'		    ;Forward Slash
+f_slash   	    DC.B	'/',0		;Forward Slash
 f_slashLen	    DC.W	1		    ;Length of Forward Slash
-pound_sign	    DC.B	'#'		    ;Pound symbol for immediate data
+pound_sign	    DC.B	'#',0		;Pound symbol for immediate data
 pound_signLen	DC.W	1	        ;Length of pound
-           
+tab_sign        DC.W    '    ',0      
+tab_Len         DC.B    4
+
+asc_wrd		    DS.W	1           ;Word converted to ASCII        
 *******************************************************************************
 *                               End EA Routine
 *******************************************************************************
@@ -2370,6 +2385,15 @@ overflow_set
 
 
 
+
+
+
+
+
+*~Font name~Courier New~
+*~Font size~10~
+*~Tab type~1~
+*~Tab size~4~
 
 
 
