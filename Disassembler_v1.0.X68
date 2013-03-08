@@ -180,14 +180,10 @@ EXIT_IO
 *printBuf - Prints value in buffer to Console
 *******************************************************************************
 prtBuf      LEA         validB,A0       ;Get Buffer Start
-            LEA         validB_end,A2   ;Get End Buffer
-;prtLoop     CMPA.W      A0,A2           ;Check if we're at end of buffer
-;            BLT         exitBufPrt      ;Exit Subroutine
-;            CMPI.W      #$0000,(A0)     
+            LEA         validB_end,A2   ;Get End Buffer     
 prtLoop
             CMPI.B      #$FF,(A0)     
             BEQ         exitBufPrt
-;            MOVE.W      (A0)+,A1        ;Store word to write
             MOVE.W      (A0),A1        ;Store word to write
             MOVE.W      #$FFFF,(A0)+
             MOVE.B      #4,D1           ;Length to print
@@ -201,7 +197,6 @@ clrBuf      LEA         validB,A0       ;Get Buffer Start
             LEA         validB_end,A1   ;Get End of buffer
 clrLoop     CMPA.L      A0,A1           ;Check if we're at end address of buffer
             BLT         exitBuf         ;End of buffer
-;            MOVE.L      #0,(A0)+        ;Write zeros to buffer
             MOVE.L      #$FFFFFFFF,(A0)+ ;Write FFFF to buffer
             BRA         clrLoop
 exitBuf		RTS							*return to subroutine
@@ -291,8 +286,6 @@ a_return	MOVEM.L		(SP)+,D3/D4/D2	;Pop off stack
 *******************************************************************************
 printAsm	MOVEM.L		A0/D0/D1,-(SP)		*Store Registers on Stack
 			CMPI.B		#01,D6				*Check Flag
-			;BEQ			prtInvalid			*Branch to Write Invalid Buffer
-			;BRA			prtValid			*Branch to Write Valid Buffer
 prtInvalid	MOVE.L		#invalidB,A1		*A1 holds Start of invalidB
 			MOVE.W		#$13,D1				*Store Counter 
 			MOVE.B		#task0,D0			*D0,A1, and D1 sb set up
@@ -1163,14 +1156,14 @@ LF          EQU         $0A
 *             to the buffer for the I/O to Display
 *******************************************************************************
 EAR_decode  
-            MOVEM.L     A0-A3/A5/D0/D2-D7,-(SP)    ;Save data from registers to stack
+            MOVEM.L     A0-A3/A5/D0/D2-D5/D7,-(SP)    ;Save data from registers to stack
             LEA         ea_index_table,A1       ;Get reference to the EA Table
             MOVE.W      D0,D2                   ;Get a copy of the six EA bits
             MOVE.B      #3,D1                   ;Store number of bits we wish to shift
             LSR.W       D1,D0                   ;Shift to the Right
             MULU	    #6,D0			        ;Form Offset for passing to Jump Index table
 	        JSR	        00(A1,D0)		        ;Now we have the index, back to Index table
-	        MOVEM.L     (SP)+,A0-A3/A5/D0/D2-D7       ;Restore registers from stack
+	        MOVEM.L     (SP)+,A0-A3/A5/D0/D2-D5/D7       ;Restore registers from stack
             RTS                                 ;Return 
 
 *Jump Index Table
@@ -1377,51 +1370,51 @@ subindex_tbl ;Uses Bitmask to differentiate Types
             JMP         easub110                ;Unused
             JMP         easub111                ;Unused
 
-************************** Absolute Addressing - Word *************************
+************************** Absolute Addressing - Long *************************
 easub000    
             *Add Tab to Buffer
             MOVE.W      #tab_sign,(A6)+         ;Load tab to buffer
-            
-            LEA         asc_wrd,A3
-            
-            *Get Dollar Sign
-            LEA         dollar_sign,A1          ;ASCII for Dollar Sign
-            MOVE.W      A1,(A6)+                ;Add to buffer
-            
-            *Prep for Conversion
-            MOVE.W      (A5)+,D0                ;Get the WORD data
-            MOVE.L      D0,D3                   ;Back up to D3
-            CLR.L       D4                      ;Empty Data Register
-            MOVE.B      #$4,D4                  ;Get the length of Hex value - WORD
-            BSR         conv_to_ascii           ;Branch to convert to ASCII
-            
-            *Store Hex Address to Buffer
-            MOVEA.L     A3,A1                   ;Move ASCII value to A1
-            MOVE.W      A1,(A6)+                ;Add to buffer
-            
-            ;MOVEA.L     #00000000,A6            ;Reset contents of A3
-            RTS                                 ;Return
-            
-************************** Absolute Addressing - Long *************************
-easub001
-            *Add Tab to Buffer
-            MOVE.W      #tab_sign,(A6)+         ;Load tab to buffer
-            
-            LEA         ascii_w,A3              ;Get converted address word
-            
+                       
             *Get Dollar Sign
             LEA         dollar_sign,A1          ;ASCII for Dollar Sign
             MOVE.W      A1,(A6)+                ;Add to buffer
             
             *Prep for Conversion - LONG
-            MOVE.L      (A5)+,D0                ;Get the LONG data
+            LEA         ascii_w,A3              ;Load variable for ascii storage
+            MOVE.L      (A4)+,D0                ;Get the LONG data
             MOVE.L      D0,D3                   ;Back up to D3
             CLR.L       D4                      ;Empty Data Register
             MOVE.B      #$8,D4                  ;Get the length of Hex value - LONG
             BSR         conv_to_ascii           ;Branch to convert to ASCII
             
             *Store Hex Address to Buffer
-            MOVEA.L     A3,A1                   ;Move ASCII value to A1
+            MOVE.L      D3,(A3)                 ;Move ASCII value to A1
+            LEA         ascii_w,A1
+            MOVE.L      A1,(A6)+                ;Add to buffer
+            
+            MOVEA.L     #00000000,A3            ;Reset contents of A3
+            RTS                                 ;Return
+            
+************************** Absolute Addressing - Word *************************
+easub001
+            *Add Tab to Buffer
+            MOVE.W      #tab_sign,(A6)+         ;Load tab to buffer
+            
+            *Get Dollar Sign
+            LEA         dollar_sign,A1          ;ASCII for Dollar Sign
+            MOVE.W      A1,(A6)+                ;Add to buffer
+            
+            *Prep for Conversion - Word
+            LEA         ascii_w,A3              ;Load variable for ascii storage
+            MOVE.L      (A4)+,D0                ;Get the WORD data
+            MOVE.L      D0,D3                   ;Back up to D3
+            CLR.L       D4                      ;Empty Data Register
+            MOVE.B      #$4,D4                  ;Get the length of Hex value - LONG
+            BSR         conv_to_ascii           ;Branch to convert to ASCII
+            
+            *Store Hex Address to Buffer     
+            MOVE.L      D3,(A3)                 ;Move ASCII value to A1
+            LEA         ascii_w,A1
             MOVE.W      A1,(A6)+                ;Add to buffer
             
             MOVEA.L     #00000000,A3            ;Reset contents of A3
@@ -2394,6 +2387,8 @@ overflow_set
 *~Font size~10~
 *~Tab type~1~
 *~Tab size~4~
+
+
 
 
 
