@@ -179,17 +179,22 @@ EXIT_IO
 *******************************************************************************
 *printBuf - Prints value in buffer to Console
 *******************************************************************************
-prtBuf      LEA         validB,A0       ;Get Buffer Start
-            LEA         validB_end,A2   ;Get End Buffer     
+prtBuf      
+            MOVEM.L     A0-A3/A5/D0-D5/D7,-(SP)
+            LEA         validB,A0       ;Get Buffer Start
+            ;LEA         validB_end,A2   ;Get End Buffer     
+            MOVEQ       #14,D0          ;display NULL terminated string at A1
 prtLoop
-            CMPI.B      #$FF,(A0)     
+            CMPI.W      #$FFFF,(A0)     
             BEQ         exitBufPrt
-            MOVE.W      (A0),A1        ;Store word to write
-            MOVE.W      #$FFFF,(A0)+
-            MOVE.B      #4,D1           ;Length to print
-            TRAP        #15             ;Print
+            MOVE.W      (A0),A1         ;Store word to write-out register A1
+            MOVE.W      #$FFFF,(A0)+    ;clear word in buffer
+            ;MOVE.B      #4,D1           ;Length to print
+            TRAP        #15             ;Print to console
             BRA         prtLoop
-exitBufPrt  RTS							*return to subroutine
+exitBufPrt  
+            MOVEM.L     (SP)+,A0-A3/A5/D0-D5/D7
+            RTS							*return to subroutine
 *******************************************************************************
 *clrBuf - Fills buffer with blanks
 *******************************************************************************
@@ -277,7 +282,9 @@ a_save		MOVE.B		D2,(A3)+		;Save in memory and ++
 a_shift		ROL.L		#08,D3			;Move over 2 digits
 			ROL.L		#08,D3			;Move over 2 digits
 			BRA			ascii_loop		;Start the loop
-a_return	MOVEM.L		(SP)+,D3/D4/D2	;Pop off stack
+a_return	
+            MOVE.B      #$00,(A3)+      ; push NULL value to buffer
+            MOVEM.L     (SP)+,D3/D4/D2  ;Pop off stack
 			RTS
 
 *******************************************************************************
@@ -436,12 +443,29 @@ linefeed            DC.B        LF
 linefeedLen         DC.B        1
 ;addr_regs           DC.B    'A0','A1','A2','A3','A4','A5','A6','A7'
 ;data_regs           DC.B    'D0','D1','D2','D3','D4','D5','D6','D7'
-addr_regs           DC.W    'A0','A1','A2','A3','A4','A5','A6','A7'
-data_regs           DC.W    'D0','D1','D2','D3','D4','D5','D6','D7'
 
+ADDR_REGS
+_A0                 DC.W        'A0',0
+_A1                 DC.W        'A1',0
+_A2                 DC.W        'A2',0
+_A3                 DC.W        'A3',0
+_A4                 DC.W        'A4',0
+_A5                 DC.W        'A5',0
+_A6                 DC.W        'A6',0
+_A7                 DC.W        'A7',0
+
+DATA_REGS
+_D0                 DC.W        'D0',0
+_D1                 DC.W        'D1',0
+_D2                 DC.W        'D2',0
+_D3                 DC.W        'D3',0
+_D4                 DC.W        'D4',0
+_D5                 DC.W        'D5',0
+_D6                 DC.W        'D6',0
+_D7                 DC.W        'D7',0
 
 ************************ IO Prompts and Messages*******************************
-ascii_w     DS.W        1
+ascii_w     DS.W        20
 greet		DC.B	    CR,LF,'SaB Disassembler - CSS 422 Winter',CR,LF
 		    DC.B	    'Start Disassembler?',CR,LF
 		    DC.B	    'Please enter Y for yes, or N for no.' 
@@ -1091,41 +1115,41 @@ SWAP_REG_MODE ; called by ISO_D6_TO_D11_FOR_EA
             MOVEM.L     (SP)+,A0-A6/D0/D1/D3-D7 ; restore register states
             RTS
 ********************************* CONSTANTS ***********************************
-_BYTE       DC.B        '.B',0
-_WORD       DC.B        '.W',0
-_LONG       DC.B        '.L',0
-_ORI        DC.B        'ORI',0
-_ANDI       DC.B        'ANDI',0
-_SUBI       DC.B        'SUBI',0
-_ADDI       DC.B        'ADDI',0
-_EORI       DC.B        'EORI',0
-_CMPI       DC.B        'CMPI',0
-_MOVE       DC.B        'MOVE',0
-_MOVEA      DC.B        'MOVEA',0
-_NEG        DC.B        'NEG',0
-_NOP        DC.B        'NOP',0
-_RTS        DC.B        'RTS',0
-_JSR        DC.B        'JSR',0
-_JMP        DC.B        'JMP',0
-_ADDQ       DC.B        'ADDQ',0
-_BCC        DC.B        'BCC',0
-_BCS        DC.B        'BCS',0
-_BEQ        DC.B        'BEQ',0
-_BVC        DC.B        'BVC',0
-_BVS        DC.B        'BVS',0
-_OR         DC.B        'OR',0
-_SUBA       DC.B        'SUBA',0
-_EOR        DC.B        'EOR',0
-_CMP        DC.B        'CMP',0
-_CMPA       DC.B        'CMPA',0
-_AND        DC.B        'AND',0
-_ADDA       DC.B        'ADDA',0
-_ASd        DC.B        'AS',0
-_ROd        DC.B        'RO',0
-_LEFT       DC.B        'L',0
-_RIGHT      DC.B        'R',0
-_DATA       DC.B        'DATA',0
-NEW_LINE    DC.B        CR,LF,0
+_BYTE       DC.W        '.B',0
+_WORD       DC.W        '.W',0
+_LONG       DC.W        '.L',0
+_ORI        DC.W        'ORI',0
+_ANDI       DC.W        'ANDI',0
+_SUBI       DC.W        'SUBI',0
+_ADDI       DC.W        'ADDI',0
+_EORI       DC.W        'EORI',0
+_CMPI       DC.W        'CMPI',0
+_MOVE       DC.W        'MOVE',0
+_MOVEA      DC.W        'MOVEA',0
+_NEG        DC.W        'NEG',0
+_NOP        DC.W        'NOP',0
+_RTS        DC.W        'RTS',0
+_JSR        DC.W        'JSR',0
+_JMP        DC.W        'JMP',0
+_ADDQ       DC.W        'ADDQ',0
+_BCC        DC.W        'BCC',0
+_BCS        DC.W        'BCS',0
+_BEQ        DC.W        'BEQ',0
+_BVC        DC.W        'BVC',0
+_BVS        DC.W        'BVS',0
+_OR         DC.W        'OR',0
+_SUBA       DC.W        'SUBA',0
+_EOR        DC.W        'EOR',0
+_CMP        DC.W        'CMP',0
+_CMPA       DC.W        'CMPA',0
+_AND        DC.W        'AND',0
+_ADDA       DC.W        'ADDA',0
+_ASd        DC.W        'AS',0
+_ROd        DC.W        'RO',0
+_LEFT       DC.W        'L',0
+_RIGHT      DC.W        'R',0
+_DATA       DC.W        'DATA',0
+NEW_LINE    DC.W        $0D0A,0
 
 *********************************** OTHER *************************************
 CR          EQU         $0D
@@ -1266,7 +1290,7 @@ eaindex100
             MOVE.W      A1,(A6)+                ;Add to buffer
             RTS                                 ;Return
 
-******************** Indirect Address Register with an Index ***********************
+******************** Indirect Address Register with an Index ******************
 eaindex101  
             *Add Tab to Buffer
             MOVE.W      #tab_sign,(A6)+         ;Load tab to buffer
@@ -1342,7 +1366,7 @@ add_word_buf
 		    MOVE.W      A1,(A6)+                ;Add to buffer
 		    RTS                                 ;Return
             		    
-********************* PC, Immediate, or Absolute Addressing ************************
+********************* PC, Immediate, or Absolute Addressing *******************
 eaindex110
             LEA         subindex_tbl,A1         ;Loads the Subindex Jump Table
             MOVE        D2,D0                   ;Store EA original - 6 bits
@@ -1350,7 +1374,7 @@ eaindex110
             JSR         00(A1,D0)               ;To SubIndex Jump Table
             RTS                                 ;Return when done
 
-********************* PC, Immediate, or Absolute Addressing ************************
+********************* PC, Immediate, or Absolute Addressing *******************
 eaindex111 
             LEA         subindex_tbl,A1         ;Loads the Subindex Jump Table
             MOVE        D2,D0                   ;Store EA original - 6 bits
@@ -1359,7 +1383,7 @@ eaindex111
             JSR         00(A1,D0)               ;To SubIndex Jump Table
             RTS                                 ;Just Return
             
-************************* aeindex110 Subindex Jump Table ***************************
+************************* aeindex110 Subindex Jump Table **********************
 subindex_tbl ;Uses Bitmask to differentiate Types
             JMP         easub000                ;Absolute Addressing - Word
             JMP         easub001                ;Absolute Addressing - Long
@@ -1370,36 +1394,11 @@ subindex_tbl ;Uses Bitmask to differentiate Types
             JMP         easub110                ;Unused
             JMP         easub111                ;Unused
 
-************************** Absolute Addressing - Long *************************
+************************** Absolute Addressing - Word *************************
 easub000    
             *Add Tab to Buffer
             MOVE.W      #tab_sign,(A6)+         ;Load tab to buffer
                        
-            *Get Dollar Sign
-            LEA         dollar_sign,A1          ;ASCII for Dollar Sign
-            MOVE.W      A1,(A6)+                ;Add to buffer
-            
-            *Prep for Conversion - LONG
-            LEA         ascii_w,A3              ;Load variable for ascii storage
-            MOVE.L      (A4)+,D0                ;Get the LONG data
-            MOVE.L      D0,D3                   ;Back up to D3
-            CLR.L       D4                      ;Empty Data Register
-            MOVE.B      #$8,D4                  ;Get the length of Hex value - LONG
-            BSR         conv_to_ascii           ;Branch to convert to ASCII
-            
-            *Store Hex Address to Buffer
-            MOVE.L      D3,(A3)                 ;Move ASCII value to A1
-            LEA         ascii_w,A1
-            MOVE.L      A1,(A6)+                ;Add to buffer
-            
-            MOVEA.L     #00000000,A3            ;Reset contents of A3
-            RTS                                 ;Return
-            
-************************** Absolute Addressing - Word *************************
-easub001
-            *Add Tab to Buffer
-            MOVE.W      #tab_sign,(A6)+         ;Load tab to buffer
-            
             *Get Dollar Sign
             LEA         dollar_sign,A1          ;ASCII for Dollar Sign
             MOVE.W      A1,(A6)+                ;Add to buffer
@@ -1409,15 +1408,43 @@ easub001
             MOVE.L      (A4)+,D0                ;Get the WORD data
             MOVE.L      D0,D3                   ;Back up to D3
             CLR.L       D4                      ;Empty Data Register
-            MOVE.B      #$4,D4                  ;Get the length of Hex value - LONG
+            MOVE.B      #4,D4              ;Get the length of Hex value - WORD
+            BSR         conv_to_ascii           ;Branch to convert to ASCII
+            
+            *Store Hex Address to Buffer
+            ;Not sure that you meant this...? Comment says A1, you have A3
+            ;MOVE.L      D3,(A3)                 ;Move ASCII value to A1
+            LEA         ascii_w,A1
+            MOVE.L      A1,(A6)+                ;Add to buffer
+            
+            ;rest A3 or reset ascii_w buffer?
+            MOVEA.L     #$00000000,A3            ;Reset contents of A3
+            RTS                                 ;Return
+            
+************************** Absolute Addressing - Long *************************
+easub001
+            *Add Tab to Buffer
+            MOVE.W      #tab_sign,(A6)+         ;Load tab to buffer
+            
+            *Get Dollar Sign
+            LEA         dollar_sign,A1          ;ASCII for Dollar Sign
+            MOVE.W      A1,(A6)+                ;Add to buffer
+            
+            *Prep for Conversion - LONG
+            LEA         ascii_w,A3              ;Load variable for ascii storage
+            MOVE.L      (A4)+,D0                ;Get the LONG data
+            MOVE.L      D0,D3                   ;Back up to D3
+            CLR.L       D4                      ;Empty Data Register
+            MOVE.B      #8,D4               ;Get the length of Hex value - LONG
             BSR         conv_to_ascii           ;Branch to convert to ASCII
             
             *Store Hex Address to Buffer     
-            MOVE.L      D3,(A3)                 ;Move ASCII value to A1
+            ;Not sure that you meant this...? Comment says A1, you have A3
+            ;MOVE.L      D3,(A3)                 ;Move ASCII value to A1
             LEA         ascii_w,A1
             MOVE.W      A1,(A6)+                ;Add to buffer
             
-            MOVEA.L     #00000000,A3            ;Reset contents of A3
+            MOVEA.L     #$00000000,A3            ;Reset contents of A3
             RTS                                 ;Return
             
 ******************* Program Counter Indirect w/ Displacement ******************
@@ -1446,7 +1473,7 @@ easub010
             MOVEA.L     A3,A1                   ;Move ASCII value to A1
             MOVE.W      #$4,D1                  ;Load the length of the word - WORD
             BSR         send_instr_buf          ;Send the Address to Buffer         
-            MOVEA.L     #00000000,A3            ;Reset contents of A3
+            MOVEA.L     #$00000000,A3            ;Reset contents of A3
             
             *Add Program Counter to Buffer
             LEA         prog_ctr,A1             ;ASCII value for (PC)
@@ -1487,7 +1514,7 @@ easub100_l
             MOVE.W      #$8,D1                  ;Load the length of the word - LONG
             BSR         send_instr_buf          ;Send the Address to Buffer
             
-            MOVEA.L     #00000000,A3            ;Reset contents of A3
+            MOVEA.L     #$00000000,A3            ;Reset contents of A3
             RTS                                 ;Return           
             
 easub100_badLen
