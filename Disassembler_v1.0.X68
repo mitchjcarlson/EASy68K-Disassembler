@@ -21,45 +21,47 @@
 *\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\*
 *******************************************************************************
 
-            ORG	    $1000
-START:									;first instruction of program
+            OPT      CRE                ;Bring in the Symbol Table
+            ORG      $1000
+START                                   ;first instruction of program
+			LEA      stack,SP           ;Stack pointer in A7
+            BSR      GREETING
+            BSR      CONTROL            ;start process to ocr
+            BRA      START
 
-			OPT		CRE					;Bring in the Symbol Table
 *******************************************************************************
 */////////////////////////////////////////////////////////////////////////////*
 *                                  I/O Routine                                *
 *\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\*
 *******************************************************************************
 
-strtAddr	EQU		$00002000			;Starting Address for user input program
-endAddr		EQU		$000FFFFF			;Ending Address - upper bound of input program
-badStart	EQU		$000FFFFE			;Invalid starting Address if GTE 000FFFFE
-dollar		EQU		$24					;ASCII $
-LF			EQU		$0A					;ASCII value for Line feed
-CR			EQU		$0D					;ASCII value for Carriage return
-space		EQU		$20					;ASCII value for space
-comma		EQU		$2C					;ASCII value for comma
-task0		EQU		00					;Task0 from Berger, print string w/ newline
-task1		EQU		01					;Task1 from Berger, prompt for input w/o newline
-task2		EQU		02					;Task2 from Berger, prompt and wait for input
-start		EQU		$1000				;Starting address of program
-addrLen		EQU		08					;Address Length = 8 bytes
-wordLen		EQU		04					;Word Length = 4 bytes
-stack		EQU		$00100000			;Default Location of Stack
-evenAnd		EQU		$00000001			;EvenCk subroutine check if a number is even 
-D			EQU		$44					;ASCII value for D
-A			EQU		$41					;ASCII value for A
-T			EQU		$54					;ASCII value for T
-upN			EQU		$4E					;ASCII value for N for User Prompt
-lwn			EQU		$6E					;ASCII value for n for User Prompt
-upY			EQU		$59					;ASCII value for Y for User Prompt
-lwY			EQU		$79					;ASCII value for y for User Prompt
-outCt		EQU		25					;Will show 25 lines on each screen, can adjust
-region		EQU		80					;decimal number 80 to help fill
+strtAddr    EQU     $00002000           ;Starting Address for user input program
+endAddr     EQU     $000FFFFF           ;Ending Address - upper bound of input program
+badStart    EQU     $000FFFFE           ;Invalid starting Address if GTE 000FFFFE
+dollar      EQU     $24                 ;ASCII $
+LF          EQU     $0A                 ;ASCII value for Line feed
+CR          EQU     $0D                 ;ASCII value for Carriage return
+space       EQU     $20                 ;ASCII value for space
+comma       EQU     $2C                 ;ASCII value for comma
+task0       EQU     00                  ;Task0 from Berger, print string w/ newline
+task1       EQU     01                  ;Task1 from Berger, prompt for input w/o newline
+task2       EQU     02                  ;Task2 from Berger, prompt and wait for input
+start       EQU     $1000               ;Starting address of program
+addrLen     EQU     08                  ;Address Length = 8 bytes
+wordLen     EQU     04                  ;Word Length = 4 bytes
+stack       EQU     $00100000           ;Default Location of Stack
+evenAnd     EQU     $00000001           ;EvenCk subroutine check if a number is even 
+D           EQU     $44                 ;ASCII value for D
+A           EQU     $41                 ;ASCII value for A
+T           EQU     $54                 ;ASCII value for T
+upN         EQU     $4E                 ;ASCII value for N for User Prompt
+lwn         EQU     $6E                 ;ASCII value for n for User Prompt
+upY         EQU     $59                 ;ASCII value for Y for User Prompt
+lwY         EQU     $79                 ;ASCII value for y for User Prompt
+outCt       EQU     25                  ;Will show 25 lines on each screen, can adjust
+region      EQU     80                  ;decimal number 80 to help fill
 
 
-			ORG			start			;Program Start
-			LEA			stack,SP		;Stack pointer in A7
             
 
 *Displays greeting to user, prompts to begin
@@ -147,7 +149,7 @@ procEnd		MOVE.B      #0,D6           ;Clear Bad Flag
 			BLE			endErr			;Branch to end error if less than or equal
 			MOVE.L		D7,end_hex		;Set end_hex to shifted address value
 			MOVE.B		#task1,D0		;Get input from user
-			BRA         CONTROL         ;start process to ocr
+            RTS
 
 CONTROL
             ; io branches here after validating addresses
@@ -169,8 +171,8 @@ ADDR_LOOP
             BSR         OCR             ;Process next OP-Code
             BSR         prtBuf          ;Print value in buffer
             BRA         ADDR_LOOP       ;Continue processing Address Range            
-EXIT_IO     
-            BRA         Greeting
+EXIT_IO
+            RTS
 
 
 *******************************************************************************
@@ -672,8 +674,8 @@ MOVEA_
             BSR         ISO_BITS
             BSR         BLW                 ; append .B, .W, or .L
     * Isolate bits d0-d5 and d6-d11, and send them to EA routine before return
-            ;BSR         ISO_D0_TO_D5_FOR_EA     ; send source <ea> bits to EAR
-            BSR         ISO_D6_TO_D11_FOR_EA    ; send dest <ea> bits to EAR
+            BSR         ISO_D0_TO_D5_FOR_EA     ; send source <ea> bits to EAR
+           BSR         ISO_D6_TO_D11_FOR_EA    ; send dest <ea> bits to EAR
             BRA         END_OCR
 
 ************************************ MOVE *************************************
@@ -683,8 +685,8 @@ MOVE_
             BSR         ISO_BITS
             BSR         BLW                 ; append .B, .W, or .L
     * Isolate bits d0-d5 and d6-d11, and send them to EA routine before return
-            ;BSR         ISO_D0_TO_D5_FOR_EA     ; send source <ea> bits to EAR
-            BSR         ISO_D6_TO_D11_FOR_EA    ; send dest <ea> bits to EAR
+            BSR         ISO_D0_TO_D5_FOR_EA     ; send source <ea> bits to EAR
+           BSR         ISO_D6_TO_D11_FOR_EA    ; send dest <ea> bits to EAR
             BRA         END_OCR
 
 ************************** NEG, NOP, RTS, JSR, JMP ****************************
@@ -810,7 +812,7 @@ OR_
             BSR         BWL                 ; append .B, .W, or .L
     * Isolate bits d0-d5 and d6-d11, and send them to EA routine before return
             BSR         ISO_D0_TO_D5_FOR_EA     ; send source <ea> bits to EAR
-            ;BSR         ISO_D6_TO_D11_FOR_EA    ; send dest <ea> bits to EAR
+            BSR         ISO_D6_TO_D11_FOR_EA    ; send dest <ea> bits to EAR
             BRA         END_OCR
 ************************************ SUBA *************************************
 SUBA_
@@ -820,7 +822,7 @@ SUBA_
             BSR         WL              ; .W or .L, use WL when isolating d8
     * Isolate bits d0-d5 and d6-d11, and send them to EA routine before return
             BSR         ISO_D0_TO_D5_FOR_EA     ; send source <ea> bits to EAR
-            ;BSR         ISO_D6_TO_D11_FOR_EA    ; send dest <ea> bits to EAR
+            BSR         ISO_D6_TO_D11_FOR_EA    ; send dest <ea> bits to EAR
             BRA         END_OCR
 ******************************* EOR, CMP, CMPA ********************************
 EOR_CMP_CMPA
@@ -839,7 +841,7 @@ CMPA_
             BSR         WL              ; .W or .L, use WL when isolating d8
     * Isolate bits d0-d5 and d6-d11, and send them to EA routine before return
             BSR         ISO_D0_TO_D5_FOR_EA     ; send source <ea> bits to EAR
-            ;BSR         ISO_D6_TO_D11_FOR_EA    ; send dest <ea> bits to EAR
+            BSR         ISO_D6_TO_D11_FOR_EA    ; send dest <ea> bits to EAR
             BRA         END_OCR
 ********************************** EOR, CMP ***********************************
 EOR_CMP
@@ -858,7 +860,7 @@ CMP_
             BSR         BWL             ; append .B, .W, or .L
     * Isolate bits d0-d5 and d6-d11, and send them to EA routine before return
             BSR         ISO_D0_TO_D5_FOR_EA     ; send source <ea> bits to EAR
-            ;BSR         ISO_D6_TO_D11_FOR_EA    ; send dest <ea> bits to EAR
+            BSR         ISO_D6_TO_D11_FOR_EA    ; send dest <ea> bits to EAR
             BRA         END_OCR
 ************************************ EOR **************************************
 EOR_
@@ -868,7 +870,7 @@ EOR_
             BSR         BWL             ; append .B, .W, or .L
     * Isolate bits d0-d5 and d6-d11, and send them to EA routine before return
             BSR         ISO_D0_TO_D5_FOR_EA     ; send source <ea> bits to EAR
-            ;BSR         ISO_D6_TO_D11_FOR_EA    ; send dest <ea> bits to EAR
+            BSR         ISO_D6_TO_D11_FOR_EA    ; send dest <ea> bits to EAR
             BRA         END_OCR
 *********************************** AND ***************************************
 AND_
@@ -878,7 +880,7 @@ AND_
             BSR         BWL             ; append .B, .W, or .L
     * Isolate bits d0-d5 and d6-d11, and send them to EA routine before return
             BSR         ISO_D0_TO_D5_FOR_EA     ; send source <ea> bits to EAR
-            ;BSR         ISO_D6_TO_D11_FOR_EA    ; send dest <ea> bits to EAR
+            BSR         ISO_D6_TO_D11_FOR_EA    ; send dest <ea> bits to EAR
             BRA         END_OCR
 ************************************ ADDA *************************************
 ADDA_
@@ -888,7 +890,7 @@ ADDA_
             BSR         WL              ; .W or .L, use WL when isolating d8
     * Isolate bits d0-d5 and d6-d11, and send them to EA routine before return
             BSR         ISO_D0_TO_D5_FOR_EA     ; send source <ea> bits to EAR
-            ;BSR         ISO_D6_TO_D11_FOR_EA    ; send dest <ea> bits to EAR
+            BSR         ISO_D6_TO_D11_FOR_EA    ; send dest <ea> bits to EAR
             BRA         END_OCR
 ********************************** ASd, ROd ***********************************
 ASd_ROd
@@ -980,21 +982,23 @@ ISO_BITS    ; Subroutine: Isolates bits based on the task # assigned to D0
             RTS                     ; return to op-code branch
 
 ISO_D0_TO_D5_FOR_EA     ; send source <ea> bits to EAR
-            MOVEQ       #0,D0           ; Iso-task 0: isolate bits d0-d5
+            MOVEQ       #0,D0               ; Iso-task 0: isolate bits d0-d5
             BSR         ISO_BITS
-            MOVE.B      D2,D0           ; load isolated bits to D0, used by EA
+            MOVE.B      D2,D0            ; load isolated bits to D0, used by EA
             MOVE.L      #0,D1
-            BSR         EAR_decode      ; call EA subroutine
-            RTS                         ; return to op-code branch
+            MOVE.W      #TAB_SIGN,(A6)+     ;Insert a tab
+            BSR         EAR_decode          ; call EA subroutine
+            RTS                             ; return to op-code branch
 
 ISO_D6_TO_D11_FOR_EA    ; send dest <ea> bits to EAR
-            MOVEQ       #7,D0           ; Iso-task 7: isolate bits d6-d11
+            MOVEQ       #7,D0               ; Iso-task 7: isolate bits d6-d11
             BSR         ISO_BITS
             BSR         SWAP_REG_MODE
-            MOVE.W      D2,D0           ; load isolated bits to D0, used by EA
+            MOVE.W      D2,D0            ; load isolated bits to D0, used by EA
             MOVE.L      #1,D1
-            BSR         EAR_decode      ; call EA subroutine
-            RTS                         ; return to op-code branch
+            MOVE.W      #COMMA_SIGN,(A6)+   ;Insert a tab
+            BSR         EAR_decode          ; call EA subroutine
+            RTS                             ; return to op-code branch
 
 d12tod15    ; Isolate bits d12-d15 and assign them to register D2
             MOVE.W      D1,D2      ; avoid overwrite of original
@@ -1206,7 +1210,7 @@ ea_index_table
 eaindex000  
             MOVE	    D2,D0		            ;Get EA from D2 (6bits)
 	        ANDI	    #7,D0		            ;Grab Register (3bits)
-	        MOVE.W      #tab_sign,(A6)+         ;Insert a tab
+	        ;MOVE.W      #tab_sign,(A6)+         ;Insert a tab
 		    BSR	        send_data_buf           ;Send data to buffer
 		    RTS                                 ;Return
 
@@ -1220,7 +1224,7 @@ eaindex001
 ****** Indirect Address Register - Returns Address within Parentheses - (An) *******
 eaindex010  
             *Add Tab to Buffer
-            MOVE.W      #tab_sign,(A6)+         ;Load tab to buffer
+            ;MOVE.W      #tab_sign,(A6)+         ;Load tab to buffer
             
             *Get the Open Paren
             LEA	        open_paren,A1	        ;ASCII for Open Paren
@@ -1241,7 +1245,7 @@ eaindex010
 ************** Indirect Address Register with Post-Increment - (An)+ ***************	    
 eaindex011  
             *Add Tab to Buffer
-            MOVE.W      #tab_sign,(A6)+         ;Load tab to buffer
+            ;MOVE.W      #tab_sign,(A6)+         ;Load tab to buffer
             
             *Get the Open Paren
             LEA	        open_paren,A1	        ;ASCII for Open Paren
@@ -1267,7 +1271,7 @@ eaindex011
 *************** Indirect Address Register with Pre-Decrement - -(An) ***************
 eaindex100  
             *Add Tab to Buffer
-            MOVE.W      #tab_sign,(A6)+         ;Load tab to buffer
+            ;MOVE.W      #tab_sign,(A6)+         ;Load tab to buffer
             
             *Get Minus Sign
             LEA         minus_sign,A1           ;ASCII for Minus Sign
@@ -1293,7 +1297,7 @@ eaindex100
 ******************** Indirect Address Register with an Index ******************
 eaindex101  
             *Add Tab to Buffer
-            MOVE.W      #tab_sign,(A6)+         ;Load tab to buffer
+            ;MOVE.W      #tab_sign,(A6)+         ;Load tab to buffer
             
             *Get Dollar Sign
             LEA         dollar_sign,A1          ;ASCII for Dollar Sign
@@ -1397,7 +1401,7 @@ subindex_tbl ;Uses Bitmask to differentiate Types
 ************************** Absolute Addressing - Word *************************
 easub000    
             *Add Tab to Buffer
-            MOVE.W      #tab_sign,(A6)+         ;Load tab to buffer
+            ;MOVE.W      #tab_sign,(A6)+         ;Load tab to buffer
                        
             *Get Dollar Sign
             LEA         dollar_sign,A1          ;ASCII for Dollar Sign
@@ -1424,7 +1428,7 @@ easub000
 ************************** Absolute Addressing - Long *************************
 easub001
             *Add Tab to Buffer
-            MOVE.W      #tab_sign,(A6)+         ;Load tab to buffer
+            ;MOVE.W      #tab_sign,(A6)+         ;Load tab to buffer
             
             *Get Dollar Sign
             LEA         dollar_sign,A1          ;ASCII for Dollar Sign
