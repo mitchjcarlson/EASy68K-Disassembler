@@ -1215,7 +1215,7 @@ eaindex000
 eaindex001
             MOVE        D2,D0                   ;Get EA from D2 (6bits)
             ANDI        #7,D0                   ;AND with 3bits to get Register Info
-            ;BSR         send_addr_buf          ;Send Address to buffer
+            BSR         send_addr_buf          ;Send Address to buffer
             RTS                                 ;Return
 
 ****** Indirect Address Register - Returns Address within Parentheses - (An) *******
@@ -1224,8 +1224,7 @@ eaindex010
             ;MOVE.W      #tab_sign,(A6)+         ;Load tab to buffer
 
             *Get the Open Paren
-            LEA	        open_paren,A1	        ;ASCII for Open Paren
-		    MOVE.W	    A1,(A6)+                ;Load open paren to buffer
+		    MOVE.W      #OPEN_PAREN,(A6)+		;Load close Paren to buffer
 
             *Get the Address
 		    CLR.L	    D0		                ;Empty data register
@@ -1235,8 +1234,7 @@ eaindex010
 
             *Get the Close Paren
 		    CLR.L	    D1		                ;Empty data register
-		    LEA	        close_paren,A1	        ;ASCII for Close Paren
-		    MOVE.W      A1,(A6)+                ;Load close Paren to buffer
+		    MOVE.W      #CLOSE_PAREN,(A6)+		;Load close Paren to buffer
             RTS                                 ;Return
 
 ************** Indirect Address Register with Post-Increment - (An)+ ***************
@@ -1493,30 +1491,25 @@ easub100
             BEQ         easub100_badLen         ;Branch to Bad Length Flag Subroutine
 
 easub100_l
-            *Get Pound Sign
-            LEA         pound_sign,A1           ;ASCII for Pound
-            MOVE.W      pound_sign,D1           ;Get the length of the Pound Sign
-            BSR         send_instr_buf          ;Add Pound Sign to Buffer
+			*Get Pound Sign
+			MOVE.W		#POUND_SIGN,(A6)+
 
-            *Get Dollar Sign
-            LEA         dollar_sign,A1          ;ASCII for Dollar Sign
-            MOVE.W      dollar_signLen,D1       ;Get the length of the Dollar Sign
-            BSR         send_instr_buf          ;Add Dollar Sign to Buffer
+			*Get Dollar Sign
+			MOVE.W		#DOLLAR_SIGN,(A6)+
 
-            *Prep for Conversion - LONG
-            MOVE.L      (A5)+,D0                ;Get the LONG data
-            MOVE.L      D0,D3                   ;Back up to D3
-            CLR.L       D4                      ;Empty Data Register
-            MOVE.B      #$8,D4                  ;Get the length of Hex value - LONG
-            BSR         conv_to_ascii           ;Branch to convert to ASCII
+			*Prep for Conversion - LONG
+			MOVE.W      (A4)+,D0                ;Get the LONG data
+			MOVE.W      D0,D3                   ;Back up to D3
+			CLR.L       D4                      ;Empty Data Register
+			MOVE.B      #$8,D4                  ;Get the length of Hex value - LONG
+			BSR         conv_to_ascii           ;Branch to convert to ASCII
 
-            *Store Hex Address to Buffer
-            MOVEA.L     A3,A1                   ;Move ASCII value to A1
-            MOVE.W      #$8,D1                  ;Load the length of the word - LONG
-            BSR         send_instr_buf          ;Send the Address to Buffer
+			*Store Hex Address to Buffer
+            LEA         ascii_w,A1
+            MOVE.W      A1,(A6)+                ;Add to buffer
 
-            MOVEA.L     #$00000000,A3            ;Reset contents of A3
-            RTS                                 ;Return
+			MOVEA.L     #$00000000,A3            ;Reset contents of A3
+			RTS                                 ;Return
 
 easub100_badLen
             MOVE.B      #1,D6                   ;Enable Bad Flag bit
