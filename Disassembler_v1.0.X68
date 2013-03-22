@@ -496,12 +496,23 @@ contiL		DC.W	    69
 * --bool bit, still not sure which register to use
 * --OCR = Op-code routine
 * --JSR OCR is a temporary call, remove when I/O actual utilizes subroutine
+ASCII_OPCODE_ADDRESS        DS.W        5
 
 OCR ; subroutine called by I/O
             MOVEM.L     A0-A3/A5/D0-D7,-(SP)
             BSR         CLR_REGS   ; clear registers D0-D7, start fresh
             LEA         validB,A6  ; load pointer to good buffer into A6
             MOVE.W      (A4)+,D1   ; A4, universal ptr to next op-code mem addr
+
+            LEA         ASCII_OPCODE_ADDRESS,A3
+            MOVE.L      D1,D3               ;Back up to D3
+            MOVEQ       #4,D4
+            BSR         conv_to_ascii       ;Branch to convert to ASCII
+
+            *Store Hex Address to Buffer
+            MOVE.W      #ASCII_OPCODE_ADDRESS,(A6)+  ;Add to buffer
+            MOVE.W      #TAB_SIGN,(A6)+     ; Insert tab to print buffer
+
                                    ; D1 holds original op-code word until
                                    ; routine is finished
             MOVEQ       #3,D0                   ; Iso-task 3: isolate d12-d15
