@@ -292,24 +292,6 @@ a_return
 			RTS
 
 *******************************************************************************
-*printAsm - Prints the contents of the buffer
-*         - Checks Flag Bit  1 -> inValid Buffer   0 -> Valid Buffer
-*******************************************************************************
-printAsm	MOVEM.L		A0/D0/D1,-(SP)		*Store Registers on Stack
-			CMPI.B		#01,D6				*Check Flag
-prtInvalid	MOVE.L		#invalidB,A1		*A1 holds Start of invalidB
-			MOVE.W		#$13,D1				*Store Counter
-			MOVE.B		#task0,D0			*D0,A1, and D1 sb set up
-			TRAP		#15
-			BRA			prtExit				*Exit Subroutine
-prtValid	MOVE.L		#validB,A1			*Store String in A1
-			MOVE.B		#task0,D0			*D0,A1, and D1 sub set up
-			TRAP		#15
-			BRA			prtExit				*Exit Subroutine
-prtExit		MOVEM.L		(SP)+,A0/D0/D1		*Clean Up
-			RTS
-
-*******************************************************************************
 *send_addr_buf - Sends an Address Register to the Buffer
 *******************************************************************************
 send_addr_buf
@@ -365,38 +347,6 @@ check_even
 even		MOVEM.L	(SP)+,D2			;Pop resister off stack
 			RTS							;Return from subroutine
 
-*******************************************************************************
-*fill_buf - Fills the buffer with spaces
-*******************************************************************************
-fill_buf
-    		CMPI.W		#00,D0			;Check for empty
-			BEQ			exit_fill		;Exit
-			MOVE.B		#space,(A0)+	;Fill with a space, then increment
-			SUBI.W		#01,D0			;Decrement Counter
-			BRA			fill_Buf		;Loop to continue filling
-exit_fill   RTS							;Return
-
-*******************************************************************************
-*send_instr_buf - Sends the value in the Register to the Appropriate Buffer
-*               - 0 -> Valid Buffer        1 -> Invalid Buffer
-*******************************************************************************
-send_instr_buf
-        	MOVEM.L		A0/D0/D1,-(SP)	;Write Registers to Stack
-			CMPI.B		#01,D6			;Check for Bad Flag
-			;BEQ			prtInvalid		;If Flagged, send to Invalid Buffer
-			;BRA			prtValid		;If Not Flagged, send to Valid Buffer
-send_inv	MOVE.L		#invalidB,A1	;Start of Invalid Buffer
-			MOVE.W		#$13,D1			;Location of Counter
-			MOVE.B		#task0,D0		;D0,A1, and D1 sb set up
-			TRAP		#15
-			BRA			instr_exit		;Branch to exit
-send_val	MOVE.L		#validB,A1		;move A1 to hold string
-			MOVE.B		#task0,D0		;Load task0
-			TRAP		#15
-			BRA			instr_exit		;Branch to exit
-instr_exit	MOVEM.L		(SP)+,A0/D0/D1	;restore stack
-			RTS							;return from subroutine
-
 ****************************** IO Errors **************************************
 
 greetErr	MOVE.B		#task0,D0		;D0 holds task2(02), print w CR
@@ -428,8 +378,8 @@ decision	        DS.B	    20	            ;to hold User's Response
 start_hex           DS.L        1               ;Starting Value in Hex
 end_hex             DS.L        1               ;Ending Value in Hex
 dataSt              DS.B        20              ;Continue Conditional Response
-col_template        DC.B        CR,LF,'MEMORY LOCATION    OP-CODE     OPERAND'
-c_temp_len          DC.W        42              ;Length of Column Template
+col_template        DC.B        CR,LF,'OP-CODE    OPERAND'
+c_temp_len          DC.W        20              ;Length of Column Template
 
 validB              DS.B        20              ;20 Bytes for valid buffer
 validB_end                                      ;Used for address index
@@ -497,9 +447,6 @@ iErrorL     DC.W        89
 conti		DC.B	    CR,LF,'Continue using Disassembler?',CR,LF
 		    DC.B	    'Please enter Y for yes, or N for no',CR,LF
 contiL		DC.W	    69
-
-curbuf		DS.L	    1	            ;current position in the buffer
-curct		DS.W	    1	            ;current count inside the good buffer
 
 *******************************************************************************
 *                               End I/O Routine
@@ -1511,9 +1458,7 @@ easub010
             LEA         ascii_w,A3              ;Get converted address word
 
             *Get Dollar Sign
-            LEA         dollar_sign,A1          ;ASCII for Dollar Sign
-            MOVE.W      dollar_signLen,D1       ;Get the length of the Dollar Sign
-            BSR         send_instr_buf          ;Add Dollar Sign to Buffer
+            MOVE.W      #DOLLAR_SIGN,(A6)+      ;Add to buffer
 
             *Get the Displacement from Extension Word
             ADDI.B      #2,D4                   ;Increment Address Location
@@ -1529,14 +1474,12 @@ easub010
 
             *Store Hex Address to Buffer
             MOVEA.L     A3,A1                   ;Move ASCII value to A1
-            MOVE.W      #$4,D1                  ;Load the length of the word - WORD
-            BSR         send_instr_buf          ;Send the Address to Buffer
-            MOVEA.L     #$00000000,A3            ;Reset contents of A3
+            MOVE.W      A1,(A6)+                ;Load into buffer
+            MOVEA.L     #$00000000,A3           ;Reset contents of A3
 
             *Add Program Counter to Buffer
             LEA         prog_ctr,A1             ;ASCII value for (PC)
-            MOVE.W      prog_ctrLen,D1          ;Get the length of (PC)
-            BSR         send_instr_buf          ;Add (PC) to Buffer
+            MOVE.W      A1,(A6)+                ;Load into buffer
 
             MOVE.L      (SP)+,D4                ;Restore register
             RTS                                 ;Return
@@ -1627,9 +1570,7 @@ post_data
             BSR         send_data_buf           ;Send data register to buffer
 
 post_skip   *Get Forward Slash
-            LEA         f_slash,A1              ;ASCII for Forward Slash
-            MOVE.W      f_slashLen,D1           ;Get the length of Forward Slash
-            BSR         send_instr_buf          ;Send the Slash to the Buffer
+            MOVE.W      #F_SLASH,(A6)+          ;Move forward slash to buffer
             MOVE.L      D5,D1                   ;Get original RLMF
 
 post_incr
@@ -1660,9 +1601,7 @@ predec_data
 
 predec_skip
             *Get Forward Slash
-            LEA         f_slash,A1              ;ASCII for Forward Slash
-            MOVE.W      f_slashLen,D1           ;Get the length of Forward Slash
-            BSR         send_instr_buf          ;Send the Slash to the Buffer
+            MOVE.W      #F_SLASH,(A6)+          ;Move forward slash to buffer
             MOVE.L      D5,D1                   ;Get original RLMF
 
 predec_incr
@@ -2488,6 +2427,10 @@ overflow_set
 
 
 
+*~Font name~Courier New~
+*~Font size~10~
+*~Tab type~1~
+*~Tab size~4~
 *~Font name~Courier New~
 *~Font size~10~
 *~Tab type~1~
