@@ -572,7 +572,7 @@ ORI_
             MOVEQ       #1,D0           ; Iso-task 1: isolate bits d6-d7
             BSR         ISO_BITS
             BSR         BWL             ; append .B, .W, or .L
-            BSR         ISO_D0_TO_D5_FOR_EA     ; send source <ea> bits to EAR
+			BSR			IMMEDIATE_ADDR
             BRA         END_OCR
 
 ************************************ ANDI *************************************
@@ -766,10 +766,7 @@ OR_
             MOVEQ       #1,D0               ; Iso-task 1: isolate bits d6-d7
             BSR         ISO_BITS
             BSR         BWL                 ; append .B, .W, or .L
-    * Isolate bits d0-d5 and d6-d11, and send them to EA routine before return
-            BSR         ISO_D0_TO_D5_FOR_EA     ; send source <ea> bits to EAR
-            BSR         ISO_D6_TO_D11_FOR_EA    ; send dest <ea> bits to EAR
-   			BSR 		EAR_decode			; call EA subroutine
+            BSR			LOGIC_OP_EA
             BRA         END_OCR
 ************************************ SUBA *************************************
 SUBA_
@@ -830,10 +827,7 @@ EOR_
             MOVEQ       #1,D0           ; Iso-task 1: isolate bits d6-d7
             BSR         ISO_BITS
             BSR         BWL             ; append .B, .W, or .L
-    * Isolate bits d0-d5 and d6-d11, and send them to EA routine before return
-            BSR         ISO_D0_TO_D5_FOR_EA     ; send source <ea> bits to EAR
-            BSR         ISO_D6_TO_D11_FOR_EA    ; send dest <ea> bits to EAR
-   			BSR 		EAR_decode			; call EA subroutine
+            BSR			LOGIC_OP_EA
             BRA         END_OCR
 *********************************** AND ***************************************
 AND_
@@ -841,54 +835,7 @@ AND_
             MOVEQ       #1,D0           ; Iso-task 1: isolate bits d6-d7
             BSR         ISO_BITS
             BSR         BWL             ; append .B, .W, or .L
-
-           	MOVEQ		#4,D0			; task 4: isolate d8
-           	BSR			ISO_BITS
-           	MULU		#4,D2			; jump setup
-
-            LEA			AND_DIRECTION,A1
-            JMP			00(A1,D2)		; jump relative to d8
-AND_DIRECTION
-			BRA			AND_SOURCE
-			BRA			AND_DESTINATION
-AND_SOURCE
-            * SOURCE
-            BSR         ISO_D0_TO_D5_FOR_EA ; send source <ea> bits to EAR
-            								; then send destination
-            * DESTINATION
-			MOVE.W		#COMMA_SIGN,(A6)+	; Insert a tab
-			MOVEQ		#7,D0				; Iso-task 7: isolate bits d6-d11
-			BSR 		ISO_BITS
-			BSR 		SWAP_REG_MODE
-			ANDI.W		#7,D2
-			MOVE.W		D2,D0				; load iso bits to D0, used by EA
-            BSR			EAR_DECODE			; push ASCII to print buffer
-            BRA			END_AND_DIRECTION
-
-AND_DESTINATION
-			* SOURCE
-			MOVE.W		#TAB_SIGN,(A6)+		; push tab to print buffer
-			MOVEQ		#7,D0				; Iso-task 7: isolate bits d6-d11
-			BSR 		ISO_BITS
-			BSR 		SWAP_REG_MODE
-			ANDI.W		#7,D2
-			MOVE.W		D2,D0				; load iso bits to D0, used by EA
-            BSR			EAR_DECODE			; push ASCII to print buffer
-
-            * DESTINATION
-			MOVE.W		#COMMA_SIGN,(A6)+	; Insert a tab
-			MOVEQ		#3,D0				; return size of source, d12-15
-			BSR 		ISO_BITS
-			MOVE.B		D2,D7				; store for EA
-			ANDI.B		#3,D7	; isolate to see if immediate is long or word
-
-			MOVEQ		#0,D0				; Iso-task 0: isolate bits d0-d5
-			BSR 		ISO_BITS
-			MOVE.W		D2,D0				; load to D0 (used by EA)
-
-
-END_AND_DIRECTION
-   			BSR 		EAR_decode			; call EA subroutine
+            BSR			LOGIC_OP_EA
             BRA         END_OCR
 ************************************ ADDA *************************************
 ADDA_
@@ -1016,21 +963,6 @@ ISO_D6_TO_D11_FOR_EA    ; send dest <ea> bits to EAR
 			MOVE.W		#COMMA_SIGN,(A6)+	; Insert a tab
 			RTS 							; return to op-code branch
 
-IMMEDIATE_ADDR
-            * SOURCE
-            MOVE.B		D2,D7
-			MOVE.W		#TAB_SIGN,(A6)+		; push tab to print buffer
-            MOVE.B		#$3C,D0
-            BSR			EAR_DECODE			; push ASCII to print buffer
-			MOVE.W		#COMMA_SIGN,(A6)+	; Insert a tab
-
-            * DESTINATION
-			MOVEQ		#0,D0				; Iso-task 0: isolate bits d0-d5
-			BSR 		ISO_BITS
-			MOVE.W		D2,D0				; load to D0 (used by EA)
-            BSR			EAR_DECODE
-            RTS
-
 d12tod15    ; Isolate bits d12-d15 and assign them to register D2
             MOVE.W      D1,D2       ; avoid overwrite of original
             ROL.W       #4,D2       ; move d12-d15 -> d0-d3
@@ -1147,6 +1079,73 @@ SWAP_REG_MODE ; called by ISO_D6_TO_D11_FOR_EA
             OR.W        D4,D5                   ; add to D5
             MOVE.W      D5,D2                   ; move D5 to D2 (working reg.)
             MOVEM.L     (SP)+,D3-D5             ; restore register states
+            RTS
+********************** IMMEDIATE OPERATOR TO EA ROUTINE ***********************
+* Used in op-code routine to send bits to EA routine. Used with ORI, ANDI, SUBI
+* ADDI, EORI, CMPI
+IMMEDIATE_ADDR
+            * SOURCE
+            MOVE.B		D2,D7
+			MOVE.W		#TAB_SIGN,(A6)+		; push tab to print buffer
+            MOVE.B		#$3C,D0
+            BSR			EAR_DECODE			; push ASCII to print buffer
+			MOVE.W		#COMMA_SIGN,(A6)+	; Insert a tab
+
+            * DESTINATION
+			MOVEQ		#0,D0				; Iso-task 0: isolate bits d0-d5
+			BSR 		ISO_BITS
+			MOVE.W		D2,D0				; load to D0 (used by EA)
+            BSR			EAR_DECODE
+            RTS
+*********************** LOGIC OPERATOR TO EA ROUTINE **************************
+* Used in op-code routine when op-code is AND, OR, EOR, etc...
+LOGIC_OP_EA
+           	MOVEQ		#4,D0			; task 4: isolate d8
+           	BSR			ISO_BITS
+           	MULU		#4,D2			; jump setup
+
+            LEA			LOGIC_TABLE,A1
+            JMP			00(A1,D2)		; jump relative to d8
+LOGIC_TABLE
+			BRA			LOGIC_SOURCE
+			BRA			LOGIC_DESTINATION
+LOGIC_SOURCE
+            * SOURCE
+            BSR         ISO_D0_TO_D5_FOR_EA ; send source <ea> bits to EAR
+            								; then send destination
+            * DESTINATION
+			MOVE.W		#COMMA_SIGN,(A6)+	; Insert a tab
+			MOVEQ		#7,D0				; Iso-task 7: isolate bits d6-d11
+			BSR 		ISO_BITS
+			BSR 		SWAP_REG_MODE		; standardize format for EA
+			ANDI.W		#7,D2				; keep 3-bits to show which reg.
+			MOVE.W		D2,D0				; load iso bits to D0, used by EA
+            BRA			END_LOGIC
+
+LOGIC_DESTINATION
+			* SOURCE
+			MOVE.W		#TAB_SIGN,(A6)+		; push tab to print buffer
+			MOVEQ		#7,D0				; Iso-task 7: isolate bits d6-d11
+			BSR 		ISO_BITS
+			BSR 		SWAP_REG_MODE		; standardize format for EA
+			ANDI.W		#7,D2				; keep 3-bits to show which reg.
+			MOVE.W		D2,D0				; load iso bits to D0, used by EA
+            BSR			EAR_DECODE			; push ASCII to print buffer
+
+            * DESTINATION
+			MOVE.W		#COMMA_SIGN,(A6)+	; Insert a tab
+			MOVEQ		#3,D0				; return size of source, d12-15
+			BSR 		ISO_BITS
+			MOVE.B		D2,D7				; store for EA
+			ANDI.B		#3,D7	; isolate to see if immediate is long or word
+
+			MOVEQ		#0,D0				; Iso-task 0: isolate bits d0-d5
+			BSR 		ISO_BITS
+			MOVE.W		D2,D0				; load to D0 (used by EA)
+
+
+END_LOGIC
+   			BSR 		EAR_decode			; call EA subroutine
             RTS
 ********************************* CONSTANTS ***********************************
 SPACING		DC.B		'  ',0 ; used to give uniform column look when printing
@@ -1454,7 +1453,7 @@ SKIP
 
 ******************* Program Counter Indirect w/ Displacement ******************
 easub010
-            MOVE.L      D4,-(SP)                ;Save D4 Register
+            MOVEM.L     A1/A3/D0/D3/D4,-(SP)                ;Save D4 Register
             LEA         ascii_w,A3              ;Get converted address word
 
             *Get Dollar Sign
@@ -1481,7 +1480,7 @@ easub010
             LEA         prog_ctr,A1             ;ASCII value for (PC)
             MOVE.W      A1,(A6)+                ;Load into buffer
 
-            MOVE.L      (SP)+,D4                ;Restore register
+			MOVEM.L		(SP)+,A1/A3/D0/D3/D4
             RTS                                 ;Return
 
 ************************ Immediate Addressing w/ Data *************************
