@@ -507,50 +507,50 @@ OCR ; subroutine called by I/O
             MOVEQ       #3,D0                   ; Iso-task 3: isolate d12-d15
             BSR         ISO_BITS
 
-            LEA			LOCAL,A1
-           	MULU		#4,D2
-            JMP			00(A1,D2)
-LOCAL
-            BRA         ORI_ANDI_SUBI_ADDI_EORI_CMPI ; ORI,ANDI,SUBI,EORI,CMPI
-            BRA         MOVE_MOVEA              ; MOVE, MOVEA
-            BRA         MOVE_MOVEA              ; MOVE, MOVEA
-            BRA         MOVE_MOVEA              ; MOVE, MOVEA
-            BRA         NEG_NOP_RTS_JSR_JMP     ; NEG, NOP, RTS, JSR, JMP
-            BRA         ADDQ_                   ; ADDQ
-            BRA         B_                      ; Bcc
-            BRA         DATA                    ; value not recognized
-            BRA         OR_                     ; OR
-            BRA         SUBA_                   ; SUBA
-            BRA         DATA                    ; value not recognized
-            BRA         EOR_CMP_CMPA            ; EOR, CMP, CMPA
-            BRA         AND_                    ; AND
-            BRA         ADDA_                   ; ADDA
-            BRA         ASd_ROd                 ; ASd, ROd
-            BRA         DATA                    ; value not recognized
-
-            ;CMP.B       #0,D2
-            ;BEQ         ORI_ANDI_SUBI_ADDI_EORI_CMPI ; ORI,ANDI,SUBI,EORI,CMPI
-            ;CMP.B       #3,D2
-            ;BLE         MOVE_MOVEA              ; MOVE, MOVEA
-            ;CMP.B       #4,D2
-            ;BEQ         NEG_NOP_RTS_JSR_JMP     ; NEG, NOP, RTS, JSR, JMP
-            ;CMP.B       #5,D2
-            ;BEQ         ADDQ_                   ; ADDQ
-            ;CMP.B       #6,D2
-            ;BEQ         B_                      ; Bcc
-            ;CMP.B       #8,D2
-            ;BEQ         OR_                     ; OR
-            ;CMP.B       #9,D2
-            ;BEQ         SUBA_                   ; SUBA
-            ;CMP.B       #11,D2
-            ;BEQ         EOR_CMP_CMPA            ; EOR, CMP, CMPA
-            ;CMP.B       #12,D2
-            ;BEQ         AND_                    ; AND
-            ;CMP.B       #13,D2
-            ;BEQ         ADDA_                   ; ADDA
-            ;CMP.B       #14,D2
-            ;BEQ         ASd_ROd                 ; ASd, ROd
+            ;LEA			LOCAL,A1
+           	;MULU		#4,D2
+            ;JMP			00(A1,D2)
+;LOCAL;
+            ;BRA         ORI_ANDI_SUBI_ADDI_EORI_CMPI ; ORI,ANDI,SUBI,EORI,CMPI
+            ;BRA         MOVE_MOVEA              ; MOVE, MOVEA
+            ;BRA         MOVE_MOVEA              ; MOVE, MOVEA
+            ;BRA         MOVE_MOVEA              ; MOVE, MOVEA
+            ;BRA         NEG_NOP_RTS_JSR_JMP     ; NEG, NOP, RTS, JSR, JMP
+            ;BRA         ADDQ_                   ; ADDQ
+            ;BRA         B_                      ; Bcc
             ;BRA         DATA                    ; value not recognized
+            ;BRA         OR_                     ; OR
+            ;BRA         SUBA_                   ; SUBA
+            ;BRA         DATA                    ; value not recognized
+            ;BRA         EOR_CMP_CMPA            ; EOR, CMP, CMPA
+            ;BRA         AND_                    ; AND
+            ;BRA         ADDA_                   ; ADDA
+            ;BRA         ASd_ROd                 ; ASd, ROd
+            ;BRA         DATA                    ; value not recognized
+
+            CMP.B       #0,D2
+            BEQ         ORI_ANDI_SUBI_ADDI_EORI_CMPI ; ORI,ANDI,SUBI,EORI,CMPI
+            CMP.B       #3,D2
+            BLE         MOVE_MOVEA              ; MOVE, MOVEA
+            CMP.B       #4,D2
+            BEQ         NEG_NOP_RTS_JSR_JMP     ; NEG, NOP, RTS, JSR, JMP
+            CMP.B       #5,D2
+            BEQ         ADDQ_                   ; ADDQ
+            CMP.B       #6,D2
+            BEQ         B_                      ; Bcc
+            CMP.B       #8,D2
+            BEQ         OR_                     ; OR
+            CMP.B       #9,D2
+            BEQ         SUBA_                   ; SUBA
+            CMP.B       #11,D2
+            BEQ         EOR_CMP_CMPA            ; EOR, CMP, CMPA
+            CMP.B       #12,D2
+            BEQ         AND_                    ; AND
+            CMP.B       #13,D2
+            BEQ         ADDA_                   ; ADDA
+            CMP.B       #14,D2
+            BEQ         ASd_ROd                 ; ASd, ROd
+            BRA         DATA                    ; value not recognized
 END_OCR
             ; end of routine, reload registers
             MOVE.W      #NEW_LINE,(A6)+         ; append to the end of every op
@@ -757,18 +757,23 @@ B_
 
 BCC_
             MOVE.W      #_BCC,(A6)+         ; push address of BCC to buffer
+            MOVE.W      (A4)+,D2
             BRA         END_OCR
 BCS_
             MOVE.W      #_BCS,(A6)+         ; push address of BCS to buffer
+            MOVE.W      (A4)+,D2
             BRA         END_OCR
 BEQ_
             MOVE.W      #_BEQ,(A6)+         ; push address of BEQ to buffer
+            MOVE.W      (A4)+,D2
             BRA         END_OCR
 BVC_
             MOVE.W      #_BVC,(A6)+         ; push address of BVC to buffer
+            MOVE.W      (A4)+,D2
             BRA         END_OCR
 BVS_
             MOVE.W      #_BVS,(A6)+         ; push address of BVS to buffer
+            MOVE.W      (A4)+,D2
             BRA         END_OCR
 ************************************* OR **************************************
 OR_
@@ -867,7 +872,7 @@ ASd_ROd
             CMP.B       #3,D2
             BEQ         ASd_ROd_MS
             BRA         ASd_ROd_RS
-
+*******************************************************************************
 ASd_ROd_RS
             MOVEQ       #6,D0               ; Iso-task 6: isolate d3-d4
             BSR         ISO_BITS
@@ -881,13 +886,44 @@ ASd_RS
             MOVE.W      #_ASd,(A6)+         ; push address of ASd to buffer
             BSR         DIRECTION
             BSR         ASd_ROd_SIZE
-            BSR         ISO_D0_TO_D5_FOR_EA     ; send source <ea> bits to EAR
+            BRA         COMPLEX
+
             BRA         END_OCR
+
 ROd_RS
             MOVE.W      #_ROd,(A6)+         ; push address of ROd to buffer
             BSR         DIRECTION
             BSR         ASd_ROd_SIZE
-            BSR         ISO_D0_TO_D5_FOR_EA     ; send source <ea> bits to EAR
+
+COMPLEX
+            MOVE.W      #TAB_SIGN,(A6)+
+            CMP.B       #1,D2
+            BEQ         ROd_WORD
+CONT_ROD_REG
+            MOVEQ       #2,D0
+            BSR         ISO_BITS
+            MOVE.B      D2,D0
+            BSR         EAR_DECODE
+
+            MOVE.W      #COMMA_SIGN,(A6)+     ; Insert tab to print buffer
+CONT_ROD_IND
+            MOVEQ       #3,D0               ; return size of source, d12-15
+            BSR         ISO_BITS
+            MOVE.B      D2,D7               ; store for EA
+            ANDI.B      #3,D7   ; isolate to see if immediate is long or word
+
+            MOVEQ       #0,D0               ; Iso-task 0: isolate bits d0-d5
+            BSR         ISO_BITS
+            ANDI.B      #7,D2
+            MOVE.W      D2,D0               ; load to D0 (used by EA)
+            BSR         EAR_decode          ; call EA subroutine
+            BRA         END_OCR
+ROd_WORD
+            MOVE.W      D1,D2
+            BTST        #5,D2
+            BNE         CONT_ROD_REG
+            BRA         CONT_ROD_IND
+
             BRA         END_OCR
 *******************************************************************************
 ASd_ROd_MS
@@ -1227,7 +1263,6 @@ LF          EQU         $0A
 EAR_decode
             MOVEM.L     A0-A3/A5/D0-D5/D7,-(SP) ;Save data from registers to stack
 
-*[sim68k]break
             LEA         ea_index_table,A1       ;Get reference to the EA Table
             CLR.L       D1
             MOVE.W      D0,D2                   ;Get a copy of the six EA bits
@@ -2363,15 +2398,6 @@ asc_wrd		    DS.W	1           ;Word converted to ASCII
     BCC         carry_clear
     BCS         carry_set
     BEQ         equal
-    BGE         greater_or_equal
-    BGT         greater_than
-    BHI         high
-    BLE         less_or_equal
-    BLS         low_or_same
-    BLT         less_than
-    BMI         minus
-    BNE         not_equal
-    BPL         plus
     BVC         overflow_clear
     BVS         overflow_set
 
