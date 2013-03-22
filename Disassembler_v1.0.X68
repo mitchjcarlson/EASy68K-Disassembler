@@ -164,15 +164,24 @@ CONTROL
 			TRAP		#15				;Run
 			MOVE.L      #1,D0           ;Set to force the buffer to clear
 			BSR         clrBuf          ;clear the buffer
+			MOVE.L      #$F,D5          ;Load for pagination simulation
             RTS
 ADDR_LOOP
+            CMPI.W      #$0,D5          ;Compare to page counter
+            BEQ         PAGEFULL        ;Wait for user to continue printing
             LEA         end_hex,A5      ;load ending address to A5
             MOVE.L      (A5),D2
             CMPA.L      (A5),A4         ;compare mem ptr to end addr
             BGT         EXIT_IO         ;Move to print buffer
             BSR         OCR             ;Process next OP-Code
             BSR         prtBuf          ;Print value in buffer
+            SUBI.B      #$1,D5          ;Decrement page counter
             BRA         ADDR_LOOP       ;Continue processing Address Range
+PAGEFULL
+            MOVE.B		#task2,D0		;D0 holds task2, wait for user
+			TRAP		#15				;Run
+			MOVE.L      #$F,D5          ;Reload for pagination simulation
+			BRA         ADDR_LOOP
 EXIT_IO
             RTS
 
@@ -198,7 +207,7 @@ prtLoop
             BRA         prtLoop
 exitBufPrt
             MOVEM.L     (SP)+,A0-A3/A5/D0-D5/D7
-            RTS							*return to subroutine
+            RTS
 *******************************************************************************
 *clrBuf - Fills buffer with blanks
 *******************************************************************************
@@ -228,7 +237,7 @@ clr_regs    CLR.L       D0              ;Clear out D0
 *******************************************************************************
 
 conv_to_hex
-    		MOVEM.L		D1/D2,-(SP)		;Put utility register on stack
+    		MOVEM.L		D1/D2/D5,-(SP)	;Put utility register on stack
 hex_loop	CMPI.B		#00,D1			;If D1 is 0 done
 			BEQ			h_return		;If done exit
 			SUBI.B		#01,D1			;Update counter
@@ -258,14 +267,14 @@ h_unconv	SUBI.B		#$37,D2			;Convert to Hex letter
 			BRA			hex_loop		;Back to loop
 badflag		MOVE.B		#01,D6			;Set bad flag
 			BRA			h_return		;Then exit
-h_return	MOVEM.L		(SP)+,D1/D2		;Pop register off stack
+h_return	MOVEM.L		(SP)+,D1/D2/D5	;Pop register off stack
 			RTS							;Return from subroutine
 
 *******************************************************************************
 * conv_to_ascii - takes Hex value, separates into individual Hex bytes
 *******************************************************************************
 conv_to_ascii
-    		MOVEM.L		D3/D4/D2,-(SP)	;Save D2 and A0
+    		MOVEM.L		D3/D4/D5/D2,-(SP)	;Save D2 and A0
 			CMPI.W		#04,D4			;See if D4 is a long or word
 			BEQ			a_shift			;If a word need to shift
 ascii_loop	CMPI.W		#00,D4			;Is count done
@@ -288,34 +297,34 @@ a_shift		ROL.L		#08,D3			;Move over 2 digits
 			BRA			ascii_loop		;Start the loop
 a_return
             MOVE.B      #$00,(A3)+      ; push NULL value to buffer
-            MOVEM.L     (SP)+,D3/D4/D2  ;Pop off stack
+            MOVEM.L     (SP)+,D3/D4/D5/D2  ;Pop off stack
 			RTS
 
 *******************************************************************************
 *send_addr_buf - Sends an Address Register to the Buffer
 *******************************************************************************
 send_addr_buf
-			MOVEM.L		D0-D2/A1-A3/A5,-(SP)	;Send Registers to Stack
+			MOVEM.L		D0-D2/D5/A1-A3/A5,-(SP)	;Send Registers to Stack
 			LEA			addr_regs,A1			;Load Address Registers
 			ANDI.W		#$00FF,D0				;Mask Most Significant Bits
 			MULU.W		#3,D0					;Calculate Offset
 			LEA			(A1,D0.W),A1			;Get Index including Offset
 			MOVE.W		A1,(A6)+
-			MOVEM.L		(SP)+,D0-D2/A1-A3/A5	;Restore Stack to Registers
+			MOVEM.L		(SP)+,D0-D2/D5/A1-A3/A5	;Restore Stack to Registers
 			RTS									;Return
 
 *******************************************************************************
 *send_data_buf - Sends a Data Register to the Buffer
 *******************************************************************************
 send_data_buf
-			MOVEM.L		D0-D2/A1-A3/A5,-(SP)  ;Send Registers to Stack
+			MOVEM.L		D0-D2/D5/A1-A3/A5,-(SP)  ;Send Registers to Stack
 			LEA			data_regs,A1    ;Load Data Registers
 			ANDI.W		#$00FF,D0	    ;Mask Most Significant Bits
 			MULU.W		#3,D0		    ;Calculate Offset
 			LEA			(A1,D0.W),A1	;Get Index including Offset starting at D0
 			MOVE.W		A1,(A6)+
 done
-			MOVEM.L		(SP)+,D0-D2/A1-A3/A5  ;Restore Stack to Registers
+			MOVEM.L		(SP)+,D0-D2/D5/A1-A3/A5  ;Restore Stack to Registers
 			RTS			;Return
 
 *******************************************************************************
@@ -2431,6 +2440,7 @@ overflow_set
 *~Font size~10~
 *~Tab type~1~
 *~Tab size~4~
+
 *~Font name~Courier New~
 *~Font size~10~
 *~Tab type~1~
