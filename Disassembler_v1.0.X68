@@ -178,14 +178,16 @@ ADDR_LOOP
             SUBI.B      #$1,D5          ;Decrement page counter
             BRA         ADDR_LOOP       ;Continue processing Address Range
 PAGEFULL
+            LEA         PAGE_BUFFER,A1  ;task2 puts null at A1
             MOVE.B		#task2,D0		;D0 holds task2, wait for user
 			TRAP		#15				;Run
 			MOVE.L      #$F,D5          ;Reload for pagination simulation
+            NOP
 			BRA         ADDR_LOOP
 EXIT_IO
             RTS
 
-
+PAGE_BUFFER     DS.W    10
 *******************************************************************************
 *                            I/O Subroutines
 *******************************************************************************
@@ -2477,6 +2479,8 @@ overflow_set
 *~Font size~10~
 *~Tab type~1~
 *~Tab size~4~
+
+
 
 *~Font name~Courier New~
 *~Font size~10~
